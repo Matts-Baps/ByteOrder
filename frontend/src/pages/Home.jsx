@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { orderApi, menuApi } from '../lib/api'
@@ -7,6 +7,7 @@ export default function Home() {
   const [queue, setQueue] = useState([])
   const [kitchenName, setKitchenName] = useState('ByteOrder Kitchen')
   const [orderUrl, setOrderUrl] = useState('')
+  const esRef = useRef(null)
 
   useEffect(() => {
     menuApi.get('/settings/kitchen_name').then(({ data }) => {
@@ -21,8 +22,13 @@ export default function Home() {
     })
 
     loadQueue()
-    const interval = setInterval(loadQueue, 15000)
-    return () => clearInterval(interval)
+
+    // Subscribe to queue updates via SSE
+    const es = new EventSource('/orders-api/orders/queue/stream')
+    esRef.current = es
+    es.onmessage = () => loadQueue()
+
+    return () => es.close()
   }, [])
 
   async function loadQueue() {
