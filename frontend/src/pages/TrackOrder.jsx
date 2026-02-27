@@ -41,8 +41,7 @@ export default function TrackOrder() {
 
   function subscribeToUpdates(id) {
     esRef.current?.close()
-    const orderServiceBase = import.meta.env.VITE_ORDER_API_URL || ''
-    const es = new EventSource(`${orderServiceBase}/orders/${id}/stream`)
+    const es = new EventSource(`/orders-api/orders/${id}/stream`)
     esRef.current = es
     es.onmessage = e => {
       try {

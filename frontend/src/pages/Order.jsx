@@ -16,7 +16,7 @@ export default function Order() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    menuApi.get('/categories').then(({ data }) => setCategories(data))
+    menuApi.get('/categories/').then(({ data }) => setCategories(data))
   }, [])
 
   function startCustomise(item) {
