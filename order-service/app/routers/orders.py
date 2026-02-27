@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app import models, schemas
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.redis_client import get_redis
 
 router = APIRouter(prefix="/orders", tags=["orders"])

@@ -4,15 +4,8 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 
-// Dash0 Website SDK — injected via environment variable at build time
-if (import.meta.env.VITE_DASH0_INGEST_ENDPOINT) {
-  import('@dash0hq/opentelemetry').then(({ Dash0 }) => {
-    Dash0.init({
-      endpoint: import.meta.env.VITE_DASH0_INGEST_ENDPOINT,
-      dataset: import.meta.env.VITE_DASH0_DATASET || 'default',
-    })
-  }).catch(() => {})
-}
+// TODO: Add Dash0 Website SDK here once the npm package is confirmed.
+// Set VITE_DASH0_INGEST_ENDPOINT in your environment to enable RUM.
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
