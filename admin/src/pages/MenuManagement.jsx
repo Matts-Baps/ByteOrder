@@ -1,14 +1,119 @@
 import { useState, useEffect } from 'react'
 import api from '../lib/api'
 
+function OptionGroupsPanel({ itemId, groups, onAdd, onDelete, onAddOption, onDeleteOption }) {
+  const [newGroupName, setNewGroupName] = useState('')
+  const [newGroupRequired, setNewGroupRequired] = useState(false)
+  const [newGroupMin, setNewGroupMin] = useState(0)
+  const [newGroupMax, setNewGroupMax] = useState(1)
+  const [newOptionName, setNewOptionName] = useState({}) // { [groupId]: string }
+
+  function handleAddGroup(e) {
+    e.preventDefault()
+    if (!newGroupName.trim()) return
+    onAdd(itemId, newGroupName.trim(), newGroupRequired, newGroupMin, newGroupMax)
+    setNewGroupName('')
+    setNewGroupRequired(false)
+    setNewGroupMin(0)
+    setNewGroupMax(1)
+  }
+
+  function handleAddOption(e, groupId) {
+    e.preventDefault()
+    const name = newOptionName[groupId]?.trim()
+    if (!name) return
+    onAddOption(itemId, groupId, name)
+    setNewOptionName(prev => ({ ...prev, [groupId]: '' }))
+  }
+
+  return (
+    <div className="mt-2 space-y-3">
+      {groups.map(group => (
+        <div key={group.id} className="border rounded-lg p-3 bg-gray-50">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <span className="text-sm font-medium text-gray-800">{group.name}</span>
+              <span className="ml-2 text-xs text-gray-500">
+                {group.required ? 'Required' : 'Optional'} · max {group.max_select}
+              </span>
+            </div>
+            <button
+              onClick={() => onDelete(itemId, group.id)}
+              className="text-xs text-red-500 hover:text-red-700"
+            >
+              Delete group
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-1 mb-2">
+            {group.options?.map(opt => (
+              <span key={opt.id} className="inline-flex items-center gap-1 text-xs bg-white border rounded-full px-2 py-0.5">
+                {opt.name}
+                <button
+                  onClick={() => onDeleteOption(itemId, group.id, opt.id)}
+                  className="text-gray-400 hover:text-red-500 leading-none"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+
+          <form onSubmit={e => handleAddOption(e, group.id)} className="flex gap-1">
+            <input
+              value={newOptionName[group.id] || ''}
+              onChange={e => setNewOptionName(prev => ({ ...prev, [group.id]: e.target.value }))}
+              placeholder="New option"
+              className="flex-1 min-w-0 border rounded px-2 py-1 text-xs"
+            />
+            <button type="submit" className="bg-orange-600 text-white rounded px-2 py-1 text-xs">+</button>
+          </form>
+        </div>
+      ))}
+
+      <form onSubmit={handleAddGroup} className="border rounded-lg p-3 bg-white space-y-2">
+        <p className="text-xs font-semibold text-gray-500">Add option group</p>
+        <div className="flex gap-2">
+          <input
+            value={newGroupName}
+            onChange={e => setNewGroupName(e.target.value)}
+            placeholder="Group name (e.g. Size)"
+            className="flex-1 min-w-0 border rounded px-2 py-1 text-xs"
+          />
+          <label className="flex items-center gap-1 text-xs">
+            <input
+              type="checkbox"
+              checked={newGroupRequired}
+              onChange={e => setNewGroupRequired(e.target.checked)}
+            />
+            Required
+          </label>
+          <label className="flex items-center gap-1 text-xs">
+            Max
+            <input
+              type="number"
+              min="1"
+              value={newGroupMax}
+              onChange={e => setNewGroupMax(parseInt(e.target.value) || 1)}
+              className="w-12 border rounded px-1 py-1 text-xs"
+            />
+          </label>
+          <button type="submit" className="bg-orange-600 text-white rounded px-2 py-1 text-xs">Add</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 export default function MenuManagement() {
   const [categories, setCategories] = useState([])
   const [ingredients, setIngredients] = useState([])
   const [selected, setSelected] = useState(null) // selected category
-  const [editingItem, setEditingItem] = useState(null)
   const [newCatName, setNewCatName] = useState('')
   const [newItemName, setNewItemName] = useState('')
   const [newItemDesc, setNewItemDesc] = useState('')
+  const [expandedOptions, setExpandedOptions] = useState(new Set()) // item IDs with section open
+  const [itemOptions, setItemOptions] = useState({})  // { [itemId]: [OptionGroupOut] }
 
   async function load() {
     const [cats, ings] = await Promise.all([
@@ -68,6 +173,46 @@ export default function MenuManagement() {
       await api.post(`/menu/items/${item.id}/ingredients`, { ingredient_id: ingId, is_default: true })
     }
     load()
+  }
+
+  async function loadOptionGroups(itemId) {
+    const { data } = await api.get(`/menu/items/${itemId}/option-groups`)
+    setItemOptions(prev => ({ ...prev, [itemId]: data }))
+  }
+
+  function toggleOptions(itemId) {
+    setExpandedOptions(prev => {
+      const next = new Set(prev)
+      if (next.has(itemId)) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
+        loadOptionGroups(itemId)
+      }
+      return next
+    })
+  }
+
+  async function addOptionGroup(itemId, name, required, minSelect, maxSelect) {
+    await api.post(`/menu/items/${itemId}/option-groups`, {
+      name, required, min_select: minSelect, max_select: maxSelect,
+    })
+    loadOptionGroups(itemId)
+  }
+
+  async function deleteOptionGroup(itemId, groupId) {
+    await api.delete(`/menu/items/${itemId}/option-groups/${groupId}`)
+    loadOptionGroups(itemId)
+  }
+
+  async function addOption(itemId, groupId, name) {
+    await api.post(`/menu/items/${itemId}/option-groups/${groupId}/options`, { name })
+    loadOptionGroups(itemId)
+  }
+
+  async function deleteOption(itemId, groupId, optionId) {
+    await api.delete(`/menu/items/${itemId}/option-groups/${groupId}/options/${optionId}`)
+    loadOptionGroups(itemId)
   }
 
   return (
@@ -157,6 +302,25 @@ export default function MenuManagement() {
                         )
                       })}
                     </div>
+                  </div>
+
+                  <div className="mt-3 border-t pt-3">
+                    <button
+                      onClick={() => toggleOptions(item.id)}
+                      className="text-xs font-semibold text-gray-500 hover:text-orange-600"
+                    >
+                      Options {expandedOptions.has(item.id) ? '▲' : '▼'}
+                    </button>
+                    {expandedOptions.has(item.id) && (
+                      <OptionGroupsPanel
+                        itemId={item.id}
+                        groups={itemOptions[item.id] || []}
+                        onAdd={addOptionGroup}
+                        onDelete={deleteOptionGroup}
+                        onAddOption={addOption}
+                        onDeleteOption={deleteOption}
+                      />
+                    )}
                   </div>
                 </div>
               ))}

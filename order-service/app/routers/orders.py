@@ -3,6 +3,7 @@ import asyncio
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app import models, schemas
 from app.database import get_db, SessionLocal
@@ -10,7 +11,7 @@ from app.redis_client import get_redis
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
-ACTIVE_STATUSES = ("pending", "in_progress")
+ACTIVE_STATUSES = ("pending", "in_progress", "ready")
 
 
 def _next_order_number(db: Session) -> str:
@@ -120,6 +121,41 @@ def get_queue(db: Session = Depends(get_db)):
     return results
 
 
+@router.get("/queue/stream")
+async def queue_stream():
+    async def event_generator():
+        redis = get_redis()
+        pubsub = redis.pubsub()
+        pubsub.subscribe("queue_updates")
+        try:
+            while True:
+                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=0)
+                if message:
+                    yield f"data: {message['data'].decode()}\n\n"
+                else:
+                    yield ": keepalive\n\n"
+                await asyncio.sleep(0.5)
+        finally:
+            pubsub.unsubscribe()
+            pubsub.close()
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.get("/history", response_model=list[schemas.OrderOut])
+def get_history(date: str | None = None, db: Session = Depends(get_db)):
+    q = db.query(models.Order).filter(models.Order.status == "completed")
+    if date:
+        try:
+            d = datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Use YYYY-MM-DD")
+        q = q.filter(func.date(models.Order.created_at) == d)
+    else:
+        q = q.filter(func.date(models.Order.created_at) == datetime.utcnow().date())
+    return q.order_by(models.Order.created_at.desc()).all()
+
+
 @router.get("/{order_id}", response_model=schemas.OrderOut)
 def get_order(order_id: int, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
@@ -179,27 +215,6 @@ async def order_stream(order_id: int, db: Session = Depends(get_db)):
             finally:
                 current_db.close()
 
-            while True:
-                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=0)
-                if message:
-                    yield f"data: {message['data'].decode()}\n\n"
-                else:
-                    yield ": keepalive\n\n"
-                await asyncio.sleep(0.5)
-        finally:
-            pubsub.unsubscribe()
-            pubsub.close()
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
-
-
-@router.get("/queue/stream")
-async def queue_stream():
-    async def event_generator():
-        redis = get_redis()
-        pubsub = redis.pubsub()
-        pubsub.subscribe("queue_updates")
-        try:
             while True:
                 message = pubsub.get_message(ignore_subscribe_messages=True, timeout=0)
                 if message:

@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 
 const nav = [
   { to: '/orders', label: 'Order Queue' },
+  { to: '/history', label: 'Order History' },
   { to: '/menu', label: 'Menu' },
   { to: '/ingredients', label: 'Ingredients' },
   { to: '/settings', label: 'Settings' },

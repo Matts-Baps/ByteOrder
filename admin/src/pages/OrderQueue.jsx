@@ -29,7 +29,13 @@ export default function OrderQueue() {
   useEffect(() => {
     fetchQueue()
     const interval = setInterval(fetchQueue, 10000)
-    return () => clearInterval(interval)
+
+    const token = localStorage.getItem('token')
+    const es = new EventSource(`/api/orders/queue/stream?token=${encodeURIComponent(token)}`)
+    es.onmessage = () => fetchQueue()
+    es.onerror = () => {}   // polling handles reconnection
+
+    return () => { clearInterval(interval); es.close() }
   }, [fetchQueue])
 
   async function advance(order) {
