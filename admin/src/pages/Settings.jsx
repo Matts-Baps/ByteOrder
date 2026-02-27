@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../lib/api'
 import axios from 'axios'
+
+const MAX_LOGO_BYTES = 512 * 1024  // 512 KB
 
 export default function Settings() {
   const [printerUrl, setPrinterUrl] = useState('')
   const [kitchenName, setKitchenName] = useState('')
   const [frontendUrl, setFrontendUrl] = useState('')
+  const [logo, setLogo] = useState('')          // data URL or ''
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [saved, setSaved] = useState('')
   const [error, setError] = useState('')
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     api.get('/settings/').then(({ data }) => {
@@ -17,8 +21,27 @@ export default function Settings() {
       setPrinterUrl(map.printer_url || '')
       setKitchenName(map.kitchen_name || '')
       setFrontendUrl(map.frontend_url || '')
+      setLogo(map.logo || '')
     })
   }, [])
+
+  function handleLogoFile(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    if (file.size > MAX_LOGO_BYTES) {
+      setError(`Logo must be under 512 KB (this file is ${Math.round(file.size / 1024)} KB)`)
+      e.target.value = ''
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = ev => setLogo(ev.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  function clearLogo() {
+    setLogo('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   async function saveSettings(e) {
     e.preventDefault()
@@ -29,6 +52,7 @@ export default function Settings() {
         api.put('/settings/printer_url', { value: printerUrl }),
         api.put('/settings/kitchen_name', { value: kitchenName }),
         api.put('/settings/frontend_url', { value: frontendUrl }),
+        api.put('/settings/logo', { value: logo }),
       ])
       setSaved('Settings saved.')
     } catch {
@@ -93,6 +117,28 @@ export default function Settings() {
             placeholder="http://192.168.1.x:3000"
           />
           <p className="text-xs text-gray-400 mt-1">Used to generate the QR code for customers</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Kitchen Logo</label>
+          {logo ? (
+            <div className="flex items-center gap-4 mb-2">
+              <img src={logo} alt="Logo preview" className="h-16 w-auto object-contain rounded border" />
+              <button type="button" onClick={clearLogo} className="text-xs text-red-500 hover:text-red-700">
+                Remove
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 mb-2">No logo set — kitchen name will be shown instead</p>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleLogoFile}
+            className="text-sm text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+          />
+          <p className="text-xs text-gray-400 mt-1">PNG, JPG or SVG · max 512 KB</p>
         </div>
 
         <button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg px-6 py-2">

@@ -5,7 +5,7 @@ from app.database import get_db
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
-ALLOWED_KEYS = {"printer_url", "kitchen_name", "frontend_url"}
+ALLOWED_KEYS = {"printer_url", "kitchen_name", "frontend_url", "logo"}
 
 
 @router.get("/", response_model=list[schemas.SettingOut])

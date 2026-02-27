@@ -6,12 +6,17 @@ import { orderApi, menuApi } from '../lib/api'
 export default function Home() {
   const [queue, setQueue] = useState([])
   const [kitchenName, setKitchenName] = useState('ByteOrder Kitchen')
+  const [logo, setLogo] = useState('')
   const [orderUrl, setOrderUrl] = useState('')
   const esRef = useRef(null)
 
   useEffect(() => {
     menuApi.get('/settings/kitchen_name').then(({ data }) => {
       if (data.value) setKitchenName(data.value)
+    }).catch(() => {})
+
+    menuApi.get('/settings/logo').then(({ data }) => {
+      if (data.value) setLogo(data.value)
     }).catch(() => {})
 
     menuApi.get('/settings/frontend_url').then(({ data }) => {
@@ -49,7 +54,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-orange-50 flex flex-col items-center justify-center px-4 py-10">
-      <h1 className="text-4xl font-extrabold text-orange-600 mb-1 tracking-tight">{kitchenName}</h1>
+      {logo
+        ? <img src={logo} alt={kitchenName} className="h-20 w-auto object-contain mb-3" />
+        : <h1 className="text-4xl font-extrabold text-orange-600 mb-1 tracking-tight">{kitchenName}</h1>
+      }
       <p className="text-gray-500 mb-10 text-lg">Scan to order from your phone</p>
 
       <div className="bg-white rounded-2xl shadow-xl p-6 mb-10">
