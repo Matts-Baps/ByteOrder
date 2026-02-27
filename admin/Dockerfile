@@ -1,15 +1,15 @@
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --foreground-scripts
+RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:20-slim
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
-RUN npm ci --omit=dev --foreground-scripts
+RUN npm ci --omit=dev
 COPY server ./server
 COPY --from=builder /app/dist ./dist
 EXPOSE 3001
