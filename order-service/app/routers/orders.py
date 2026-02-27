@@ -76,8 +76,9 @@ def create_order(data: schemas.OrderIn, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(order)
 
-    # Publish to Redis for print-service
+    # Publish to Redis for print-service and queue watchers
     redis = get_redis()
+    redis.publish("queue_updates", json.dumps({"order_id": order.id, "status": order.status}))
     redis.publish("new_orders", json.dumps({
         "order_id": order.id,
         "order_number": order.order_number,
@@ -179,7 +180,7 @@ async def order_stream(order_id: int, db: Session = Depends(get_db)):
                 current_db.close()
 
             while True:
-                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=30)
+                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=0)
                 if message:
                     yield f"data: {message['data'].decode()}\n\n"
                 else:
@@ -200,7 +201,7 @@ async def queue_stream():
         pubsub.subscribe("queue_updates")
         try:
             while True:
-                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=30)
+                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=0)
                 if message:
                     yield f"data: {message['data'].decode()}\n\n"
                 else:
