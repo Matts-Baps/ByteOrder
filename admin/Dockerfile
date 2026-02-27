@@ -1,11 +1,13 @@
 FROM node:20-slim AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --ignore-scripts
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts
 COPY . .
-#RUN ARCH=$(node -p process.arch) && \
-#    ESBUILD_BINARY_PATH="/app/node_modules/@esbuild/linux-${ARCH}/bin/esbuild" \
-RUN npm run build && \
+RUN ARCH=$(node -p process.arch) && \
+    mkdir -p node_modules/esbuild/bin && \
+    cp node_modules/@esbuild/linux-${ARCH}/bin/esbuild node_modules/esbuild/bin/esbuild && \
+    npm run build && \
     npm prune --omit=dev
 
 FROM node:20-slim
