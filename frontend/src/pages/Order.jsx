@@ -159,11 +159,14 @@ export default function Order() {
         {step === STEPS.CUSTOMISE && selectedItem && (
           <div>
             <h2 className="text-2xl font-bold text-brand-text mb-1">{selectedItem.name}</h2>
-            <p className="text-gray-500 mb-6">Tap ingredients to add or remove them</p>
+            <p className="text-gray-500 mb-6">Tap toppings to add them to your order</p>
 
             <div className="bg-brand-surface rounded-2xl shadow p-5 mb-6">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Ingredients</h3>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Add toppings</h3>
               <div className="flex flex-wrap gap-2">
+                {Object.entries(customIngredients).length === 0 && (
+                  <p className="text-sm text-gray-400">No toppings available for this item</p>
+                )}
                 {Object.entries(customIngredients).map(([id, { name: ingName, included }]) => (
                   <button
                     key={id}
@@ -174,7 +177,7 @@ export default function Order() {
                     className={`px-4 py-2 rounded-full font-medium text-sm border-2 transition-all ${
                       included
                         ? 'bg-brand-600 border-brand-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-400 line-through'
+                        : 'bg-white border-gray-200 text-gray-500 hover:border-brand-400 hover:text-brand-600'
                     }`}
                   >
                     {ingName}
@@ -209,15 +212,12 @@ export default function Order() {
                         Remove
                       </button>
                     </div>
-                    {item.ingredients.filter(i => i.included).length > 0 && (
+                    {item.ingredients.filter(i => i.included).length > 0 ? (
                       <p className="text-sm text-gray-500 mt-1">
-                        With: {item.ingredients.filter(i => i.included).map(i => i.ingredient_name).join(', ')}
+                        {item.ingredients.filter(i => i.included).map(i => i.ingredient_name).join(', ')}
                       </p>
-                    )}
-                    {item.ingredients.filter(i => !i.included).length > 0 && (
-                      <p className="text-sm text-red-400 mt-0.5">
-                        No: {item.ingredients.filter(i => !i.included).map(i => i.ingredient_name).join(', ')}
-                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-400 mt-1">Plain</p>
                     )}
                   </div>
                 ))}
