@@ -47,7 +47,9 @@ def _is_safe_printer_url(url: str) -> bool:
             return False
         try:
             addr = ipaddress.ip_address(host)
-            if addr.is_loopback or addr.is_private or addr.is_link_local or addr.is_reserved:
+            # Allow private LAN IPs — printer lives on the local network.
+            # Block loopback and link-local (169.254.x — cloud metadata endpoints) only.
+            if addr.is_loopback or addr.is_link_local:
                 return False
         except ValueError:
             pass
