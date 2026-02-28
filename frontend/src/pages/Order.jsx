@@ -62,7 +62,7 @@ export default function Order() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-orange-600 text-white px-4 py-4 flex items-center gap-3">
+      <header className="bg-brand-600 text-white px-4 py-4 flex items-center gap-3">
         {step !== STEPS.NAME && (
           <button onClick={() => {
             if (step === STEPS.CATEGORY) setStep(STEPS.NAME)
@@ -75,7 +75,7 @@ export default function Order() {
         {basket.length > 0 && step !== STEPS.BASKET && (
           <button
             onClick={() => setStep(STEPS.BASKET)}
-            className="ml-auto bg-white text-orange-600 font-bold px-3 py-1 rounded-lg text-sm"
+            className="ml-auto bg-white text-brand-600 font-bold px-3 py-1 rounded-lg text-sm"
           >
             Basket ({basket.length})
           </button>
@@ -96,12 +96,12 @@ export default function Order() {
               onKeyDown={e => e.key === 'Enter' && name.trim() && setStep(STEPS.CATEGORY)}
               placeholder="Your name"
               autoFocus
-              className="w-full border-2 border-gray-200 focus:border-orange-500 rounded-xl px-4 py-3 text-lg outline-none mb-4"
+              className="w-full border-2 border-gray-200 focus:border-brand-500 rounded-xl px-4 py-3 text-lg outline-none mb-4"
             />
             <button
               onClick={() => setStep(STEPS.CATEGORY)}
               disabled={!name.trim()}
-              className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-40 text-white font-bold py-3 rounded-xl text-lg transition-colors"
+              className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-bold py-3 rounded-xl text-lg transition-colors"
             >
               Let's order!
             </button>
@@ -117,7 +117,7 @@ export default function Order() {
                 <button
                   key={cat.id}
                   onClick={() => { setSelectedCat(cat); setStep(STEPS.ITEM) }}
-                  className="bg-white rounded-2xl shadow p-6 text-left hover:shadow-md hover:border-orange-300 border-2 border-transparent transition-all"
+                  className="bg-white rounded-2xl shadow p-6 text-left hover:shadow-md hover:border-brand-300 border-2 border-transparent transition-all"
                 >
                   <p className="font-bold text-gray-900 text-lg">{cat.name}</p>
                   {cat.description && <p className="text-gray-500 text-sm mt-1">{cat.description}</p>}
@@ -136,7 +136,7 @@ export default function Order() {
                 <button
                   key={item.id}
                   onClick={() => startCustomise(item)}
-                  className="w-full bg-white rounded-2xl shadow px-5 py-4 text-left hover:shadow-md border-2 border-transparent hover:border-orange-300 transition-all"
+                  className="w-full bg-white rounded-2xl shadow px-5 py-4 text-left hover:shadow-md border-2 border-transparent hover:border-brand-300 transition-all"
                 >
                   <p className="font-bold text-gray-900 text-lg">{item.name}</p>
                   {item.description && <p className="text-gray-500 text-sm mt-0.5">{item.description}</p>}
@@ -169,7 +169,7 @@ export default function Order() {
                     }))}
                     className={`px-4 py-2 rounded-full font-medium text-sm border-2 transition-all ${
                       included
-                        ? 'bg-orange-600 border-orange-600 text-white'
+                        ? 'bg-brand-600 border-brand-600 text-white'
                         : 'bg-white border-gray-300 text-gray-400 line-through'
                     }`}
                   >
@@ -181,7 +181,7 @@ export default function Order() {
 
             <button
               onClick={addToBasket}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl text-lg transition-colors"
+              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl text-lg transition-colors"
             >
               Add to order
             </button>
@@ -223,14 +223,14 @@ export default function Order() {
             <div className="flex gap-3">
               <button
                 onClick={() => setStep(STEPS.CATEGORY)}
-                className="flex-1 bg-white border-2 border-orange-200 text-orange-600 font-bold py-3 rounded-xl transition-colors hover:bg-orange-50"
+                className="flex-1 bg-white border-2 border-brand-200 text-brand-600 font-bold py-3 rounded-xl transition-colors hover:bg-brand-50"
               >
                 Add more
               </button>
               <button
                 onClick={placeOrder}
                 disabled={basket.length === 0 || submitting}
-                className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 text-white font-bold py-3 rounded-xl transition-colors"
+                className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-bold py-3 rounded-xl transition-colors"
               >
                 {submitting ? 'Placing…' : 'Place Order'}
               </button>

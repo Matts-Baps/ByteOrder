@@ -66,7 +66,7 @@ function OptionGroupsPanel({ itemId, groups, onAdd, onDelete, onAddOption, onDel
               placeholder="New option"
               className="flex-1 min-w-0 border rounded px-2 py-1 text-xs"
             />
-            <button type="submit" className="bg-orange-600 text-white rounded px-2 py-1 text-xs">+</button>
+            <button type="submit" className="bg-brand-600 text-white rounded px-2 py-1 text-xs">+</button>
           </form>
         </div>
       ))}
@@ -98,7 +98,7 @@ function OptionGroupsPanel({ itemId, groups, onAdd, onDelete, onAddOption, onDel
               className="w-12 border rounded px-1 py-1 text-xs"
             />
           </label>
-          <button type="submit" className="bg-orange-600 text-white rounded px-2 py-1 text-xs">Add</button>
+          <button type="submit" className="bg-brand-600 text-white rounded px-2 py-1 text-xs">Add</button>
         </div>
       </form>
     </div>
@@ -225,7 +225,7 @@ export default function MenuManagement() {
             <div
               key={cat.id}
               className={`flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer ${
-                selected?.id === cat.id ? 'bg-orange-100 text-orange-800' : 'hover:bg-gray-100'
+                selected?.id === cat.id ? 'bg-brand-100 text-brand-800' : 'hover:bg-gray-100'
               }`}
               onClick={() => setSelected(cat)}
             >
@@ -249,7 +249,7 @@ export default function MenuManagement() {
             placeholder="New category"
             className="flex-1 min-w-0 border rounded px-2 py-1 text-sm"
           />
-          <button onClick={addCategory} className="bg-orange-600 text-white rounded px-2 py-1 text-sm">+</button>
+          <button onClick={addCategory} className="bg-brand-600 text-white rounded px-2 py-1 text-sm">+</button>
         </div>
       </div>
 
@@ -293,8 +293,8 @@ export default function MenuManagement() {
                             onClick={() => toggleIngredient(item, ing.id, linked)}
                             className={`text-xs px-2 py-1 rounded-full border transition-colors ${
                               linked
-                                ? 'bg-orange-600 text-white border-orange-600'
-                                : 'bg-white text-gray-600 border-gray-300 hover:border-orange-400'
+                                ? 'bg-brand-600 text-white border-brand-600'
+                                : 'bg-white text-gray-600 border-gray-300 hover:border-brand-400'
                             }`}
                           >
                             {ing.name}
@@ -307,7 +307,7 @@ export default function MenuManagement() {
                   <div className="mt-3 border-t pt-3">
                     <button
                       onClick={() => toggleOptions(item.id)}
-                      className="text-xs font-semibold text-gray-500 hover:text-orange-600"
+                      className="text-xs font-semibold text-gray-500 hover:text-brand-600"
                     >
                       Options {expandedOptions.has(item.id) ? '▲' : '▼'}
                     </button>
@@ -343,7 +343,7 @@ export default function MenuManagement() {
                 />
                 <button
                   onClick={addItem}
-                  className="bg-orange-600 text-white rounded px-4 py-2 text-sm font-medium"
+                  className="bg-brand-600 text-white rounded px-4 py-2 text-sm font-medium"
                 >
                   Add
                 </button>

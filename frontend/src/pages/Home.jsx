@@ -7,6 +7,7 @@ export default function Home() {
   const [queue, setQueue] = useState([])
   const [kitchenName, setKitchenName] = useState('ByteOrder Kitchen')
   const [logo, setLogo] = useState('')
+  const [brandColor, setBrandColor] = useState('#ea580c')
   const [orderUrl, setOrderUrl] = useState('')
   const esRef = useRef(null)
 
@@ -17,6 +18,10 @@ export default function Home() {
 
     menuApi.get('/settings/logo').then(({ data }) => {
       if (data.value) setLogo(data.value)
+    }).catch(() => {})
+
+    menuApi.get('/settings/brand_primary').then(({ data }) => {
+      if (data.value) setBrandColor(data.value)
     }).catch(() => {})
 
     menuApi.get('/settings/frontend_url').then(({ data }) => {
@@ -53,21 +58,21 @@ export default function Home() {
   const STATUS_LABELS = { pending: 'Waiting', in_progress: 'Cooking', ready: 'Ready!' }
 
   return (
-    <div className="min-h-screen bg-orange-50 flex flex-col items-center justify-center px-4 py-10">
+    <div className="min-h-screen bg-brand-50 flex flex-col items-center justify-center px-4 py-10">
       {logo
         ? <img src={logo} alt={kitchenName} className="h-20 w-auto object-contain mb-3" />
-        : <h1 className="text-4xl font-extrabold text-orange-600 mb-1 tracking-tight">{kitchenName}</h1>
+        : <h1 className="text-4xl font-extrabold text-brand-600 mb-1 tracking-tight">{kitchenName}</h1>
       }
       <p className="text-gray-500 mb-10 text-lg">Scan to order from your phone</p>
 
       <div className="bg-white rounded-2xl shadow-xl p-6 mb-10">
         {orderUrl ? (
-          <QRCodeSVG value={orderUrl} size={220} fgColor="#ea580c" />
+          <QRCodeSVG value={orderUrl} size={220} fgColor={brandColor} />
         ) : (
           <div className="w-[220px] h-[220px] bg-gray-100 rounded animate-pulse" />
         )}
         <p className="text-center text-sm text-gray-400 mt-3">
-          or <Link to="/order" className="text-orange-600 underline">tap here</Link> to order
+          or <Link to="/order" className="text-brand-600 underline">tap here</Link> to order
         </p>
       </div>
 
@@ -95,13 +100,13 @@ export default function Home() {
       <div className="mt-8 flex gap-4">
         <Link
           to="/order"
-          className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 py-3 rounded-xl text-lg shadow transition-colors"
+          className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-8 py-3 rounded-xl text-lg shadow transition-colors"
         >
           Place Order
         </Link>
         <Link
           to="/track"
-          className="bg-white hover:bg-gray-50 text-orange-600 font-bold px-8 py-3 rounded-xl text-lg shadow border border-orange-200 transition-colors"
+          className="bg-white hover:bg-gray-50 text-brand-600 font-bold px-8 py-3 rounded-xl text-lg shadow border border-brand-200 transition-colors"
         >
           Track Order
         </Link>

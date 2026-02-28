@@ -51,7 +51,7 @@ export default function OrderQueue() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Order Queue</h1>
-        <button onClick={fetchQueue} className="text-sm text-orange-600 hover:underline">Refresh</button>
+        <button onClick={fetchQueue} className="text-sm text-brand-600 hover:underline">Refresh</button>
       </div>
 
       {orders.length === 0 && (
@@ -97,7 +97,7 @@ export default function OrderQueue() {
             {NEXT_STATUS[order.status] && (
               <button
                 onClick={() => advance(order)}
-                className="mt-auto w-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
+                className="mt-auto w-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
               >
                 {NEXT_LABEL[order.status]}
               </button>

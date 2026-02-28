@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import api from '../lib/api'
 
 const nav = [
   { to: '/orders', label: 'Order Queue' },
@@ -11,6 +13,12 @@ const nav = [
 export default function Layout() {
   const navigate = useNavigate()
 
+  useEffect(() => {
+    api.get('/settings/brand_primary').then(({ data }) => {
+      if (data.value) document.documentElement.style.setProperty('--brand-primary', data.value)
+    }).catch(() => {})
+  }, [])
+
   function logout() {
     localStorage.removeItem('token')
     navigate('/login')
@@ -18,7 +26,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-orange-600 text-white shadow">
+      <header className="bg-brand-600 text-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <span className="text-xl font-bold tracking-tight">ByteOrder Admin</span>
           <button onClick={logout} className="text-sm underline hover:no-underline">Log out</button>
@@ -34,8 +42,8 @@ export default function Layout() {
               className={({ isActive }) =>
                 `px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   isActive
-                    ? 'border-orange-600 text-orange-600'
-                    : 'border-transparent text-gray-600 hover:text-orange-600'
+                    ? 'border-brand-600 text-brand-600'
+                    : 'border-transparent text-gray-600 hover:text-brand-600'
                 }`
               }
             >

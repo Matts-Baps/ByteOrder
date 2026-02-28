@@ -62,7 +62,7 @@ export default function TrackOrder() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-orange-600 text-white px-4 py-4">
+      <header className="bg-brand-600 text-white px-4 py-4">
         <Link to="/" className="text-white text-xl">←</Link>
         <span className="text-xl font-bold ml-3">Track Order</span>
       </header>
@@ -75,11 +75,11 @@ export default function TrackOrder() {
               value={lookupId}
               onChange={e => setLookupId(e.target.value)}
               placeholder="Enter your order ID"
-              className="w-full border-2 border-gray-200 focus:border-orange-500 rounded-xl px-4 py-3 text-lg outline-none mb-4"
+              className="w-full border-2 border-gray-200 focus:border-brand-500 rounded-xl px-4 py-3 text-lg outline-none mb-4"
             />
             <button
               type="submit"
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl text-lg"
+              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl text-lg"
             >
               Track
             </button>
@@ -90,7 +90,7 @@ export default function TrackOrder() {
             {error ? (
               <div>
                 <p className="text-red-500 mb-4">{error}</p>
-                <Link to="/track" className="text-orange-600 underline">Try again</Link>
+                <Link to="/track" className="text-brand-600 underline">Try again</Link>
               </div>
             ) : (
               <p className="text-gray-400">Loading…</p>
@@ -110,23 +110,20 @@ export default function TrackOrder() {
                 {STATUS_STEPS.map((s, i) => (
                   <div key={s} className="flex flex-col items-center flex-1">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm mb-1 ${
-                      i <= currentStep ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-400'
+                      i <= currentStep ? 'bg-brand-600 text-white' : 'bg-gray-200 text-gray-400'
                     }`}>
                       {i < currentStep ? '✓' : i + 1}
                     </div>
-                    <p className={`text-xs text-center ${i <= currentStep ? 'text-orange-600 font-medium' : 'text-gray-400'}`}>
+                    <p className={`text-xs text-center ${i <= currentStep ? 'text-brand-600 font-medium' : 'text-gray-400'}`}>
                       {STATUS_LABELS[s]}
                     </p>
-                    {i < STATUS_STEPS.length - 1 && (
-                      <div className={`hidden`} />
-                    )}
                   </div>
                 ))}
               </div>
               {/* Connecting line */}
               <div className="relative h-1 bg-gray-200 rounded -mt-10 mx-4 mb-6" style={{ zIndex: 0 }}>
                 <div
-                  className="absolute top-0 left-0 h-1 bg-orange-600 rounded transition-all duration-500"
+                  className="absolute top-0 left-0 h-1 bg-brand-600 rounded transition-all duration-500"
                   style={{ width: `${(currentStep / (STATUS_STEPS.length - 1)) * 100}%` }}
                 />
               </div>
@@ -134,7 +131,7 @@ export default function TrackOrder() {
               <p className="text-center text-gray-600 mt-2">{STATUS_DESCRIPTIONS[status]}</p>
 
               {queuePos && status === 'pending' && (
-                <p className="text-center text-orange-600 font-bold mt-2">
+                <p className="text-center text-brand-600 font-bold mt-2">
                   You are #{queuePos} in the queue
                 </p>
               )}

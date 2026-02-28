@@ -1,3 +1,47 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Brand colour tokens — override --brand-primary at runtime to retheme everything */
+:root {
+  --brand-primary: #ea580c;
+  --brand-50:  color-mix(in srgb, var(--brand-primary)  8%, white);
+  --brand-100: color-mix(in srgb, var(--brand-primary) 15%, white);
+  --brand-200: color-mix(in srgb, var(--brand-primary) 25%, white);
+  --brand-300: color-mix(in srgb, var(--brand-primary) 40%, white);
+  --brand-400: color-mix(in srgb, var(--brand-primary) 60%, white);
+  --brand-500: color-mix(in srgb, var(--brand-primary) 85%, white);
+  --brand-600: var(--brand-primary);
+  --brand-700: color-mix(in srgb, var(--brand-primary) 82%, black);
+  --brand-800: color-mix(in srgb, var(--brand-primary) 60%, black);
+}
+
+@layer utilities {
+  .bg-brand-50  { background-color: var(--brand-50);  }
+  .bg-brand-100 { background-color: var(--brand-100); }
+  .bg-brand-600 { background-color: var(--brand-600); }
+  .bg-brand-700 { background-color: var(--brand-700); }
+
+  .text-brand-600 { color: var(--brand-600); }
+  .text-brand-700 { color: var(--brand-700); }
+  .text-brand-800 { color: var(--brand-800); }
+
+  .border-brand-200 { border-color: var(--brand-200); }
+  .border-brand-300 { border-color: var(--brand-300); }
+  .border-brand-400 { border-color: var(--brand-400); }
+  .border-brand-600 { border-color: var(--brand-600); }
+
+  .hover\:bg-brand-50:hover  { background-color: var(--brand-50);  }
+  .hover\:bg-brand-100:hover { background-color: var(--brand-100); }
+  .hover\:bg-brand-700:hover { background-color: var(--brand-700); }
+  .hover\:text-brand-600:hover   { color: var(--brand-600); }
+  .hover\:border-brand-300:hover { border-color: var(--brand-300); }
+  .hover\:border-brand-400:hover { border-color: var(--brand-400); }
+
+  .focus\:border-brand-500:focus { border-color: var(--brand-500); }
+  .focus\:ring-brand-500:focus   { --tw-ring-color: var(--brand-500); }
+
+  .file\:bg-brand-50::file-selector-button   { background-color: var(--brand-50);  }
+  .file\:text-brand-700::file-selector-button { color: var(--brand-700); }
+  .hover\:file\:bg-brand-100:hover::file-selector-button { background-color: var(--brand-100); }
+}

@@ -65,7 +65,7 @@ export default function Ingredients() {
         />
         <button
           onClick={add}
-          className="bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-4 py-2 font-medium"
+          className="bg-brand-600 hover:bg-brand-700 text-white rounded-lg px-4 py-2 font-medium"
         >
           Add
         </button>
