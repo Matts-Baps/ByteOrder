@@ -27,8 +27,8 @@ spec:
                   name: byteorder-postgres
                   key: url
                   {{- else }}
-                  name: {{ $.Values.postgres.existingSecret }}
-                  key: {{ $.Values.postgres.existingSecretKey }}
+                  name: {{ required "postgres.existingSecret is required when postgres.enabled is false" $.Values.postgres.existingSecret }}
+                  key: {{ required "postgres.existingSecretKey is required when postgres.enabled is false" $.Values.postgres.existingSecretKey }}
                   {{- end }}
             {{- if ne $svc "frontend" }}
             - name: REDIS_URL

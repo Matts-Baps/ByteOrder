@@ -7,7 +7,7 @@ metadata:
     {{- if .Values.ingress.className }}
     kubernetes.io/ingress.class: {{ .Values.ingress.className }}
     {{- end }}
-    {{- if .Values.ingress.tls.enabled }}
+    {{- if and .Values.ingress.tls .Values.ingress.tls.enabled }}
     cert-manager.io/cluster-issuer: {{ .Values.ingress.tls.clusterIssuer }}
     {{- end }}
 spec:

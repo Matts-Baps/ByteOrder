@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app import models, schemas
 from app.database import get_db
@@ -23,6 +23,8 @@ def get_setting(key: str, db: Session = Depends(get_db)):
 
 @router.put("/{key}", response_model=schemas.SettingOut)
 def upsert_setting(key: str, data: schemas.SettingIn, db: Session = Depends(get_db)):
+    if key not in ALLOWED_KEYS:
+        raise HTTPException(status_code=400, detail=f"Unknown setting key: {key}")
     setting = db.query(models.Setting).filter(models.Setting.key == key).first()
     if setting:
         setting.value = data.value

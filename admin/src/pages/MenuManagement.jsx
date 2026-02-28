@@ -4,17 +4,15 @@ import api from '../lib/api'
 function OptionGroupsPanel({ itemId, groups, onAdd, onDelete, onAddOption, onDeleteOption }) {
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupRequired, setNewGroupRequired] = useState(false)
-  const [newGroupMin, setNewGroupMin] = useState(0)
   const [newGroupMax, setNewGroupMax] = useState(1)
   const [newOptionName, setNewOptionName] = useState({}) // { [groupId]: string }
 
   function handleAddGroup(e) {
     e.preventDefault()
     if (!newGroupName.trim()) return
-    onAdd(itemId, newGroupName.trim(), newGroupRequired, newGroupMin, newGroupMax)
+    onAdd(itemId, newGroupName.trim(), newGroupRequired, 0, newGroupMax)
     setNewGroupName('')
     setNewGroupRequired(false)
-    setNewGroupMin(0)
     setNewGroupMax(1)
   }
 
@@ -181,16 +179,14 @@ export default function MenuManagement() {
   }
 
   function toggleOptions(itemId) {
+    const isOpening = !expandedOptions.has(itemId)
     setExpandedOptions(prev => {
       const next = new Set(prev)
-      if (next.has(itemId)) {
-        next.delete(itemId)
-      } else {
-        next.add(itemId)
-        loadOptionGroups(itemId)
-      }
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
       return next
     })
+    if (isOpening) loadOptionGroups(itemId)
   }
 
   async function addOptionGroup(itemId, name, required, minSelect, maxSelect) {

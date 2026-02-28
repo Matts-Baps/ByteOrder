@@ -31,11 +31,15 @@ export default function OrderQueue() {
     const interval = setInterval(fetchQueue, 10000)
 
     const token = localStorage.getItem('token')
-    const es = new EventSource(`/api/orders/queue/stream?token=${encodeURIComponent(token)}`)
-    es.onmessage = () => fetchQueue()
-    es.onerror = () => {}   // polling handles reconnection
+    const es = token
+      ? new EventSource(`/api/orders/queue/stream?token=${encodeURIComponent(token)}`)
+      : null
+    if (es) {
+      es.onmessage = () => fetchQueue()
+      es.onerror = () => {}   // polling handles reconnection
+    }
 
-    return () => { clearInterval(interval); es.close() }
+    return () => { clearInterval(interval); es?.close() }
   }, [fetchQueue])
 
   async function advance(order) {
