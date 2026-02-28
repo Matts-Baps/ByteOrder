@@ -16,6 +16,9 @@ adminDefaultPassword: byteorder
 
 otelEndpoint: ""
 
+dash0:
+  enabled: false   # set true when deploying to a cluster running the Dash0 operator
+
 ingress:
   enabled: true
   frontendHost: byteorder.local
