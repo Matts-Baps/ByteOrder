@@ -35,6 +35,8 @@ spec:
               value: redis://byteorder-redis:6379
             - name: OTEL_ENDPOINT
               value: {{ $.Values.otelEndpoint | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: "byteorder-{{ $svc }}"
             {{- end }}
             {{- if eq $svc "admin" }}
             - name: MENU_SERVICE_URL

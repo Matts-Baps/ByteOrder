@@ -1,3 +1,8 @@
+// OpenTelemetry — must be required before anything else
+if (process.env.OTEL_ENDPOINT) {
+  require('./telemetry')
+}
+
 const express = require('express')
 const cors = require('cors')
 const path = require('path')
@@ -6,11 +11,6 @@ const menuProxy = require('./routes/menu')
 const orderProxy = require('./routes/orders')
 const settingsProxy = require('./routes/settings')
 const { requireAuth } = require('./middleware/auth')
-
-// OpenTelemetry — must be required before anything else if configured
-if (process.env.OTEL_ENDPOINT) {
-  require('./telemetry')
-}
 
 // Startup security check — refuse weak JWT secret in production.
 // ADMIN_DEFAULT_PASSWORD is a one-time DB seed value (only used when the
