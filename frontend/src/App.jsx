@@ -15,6 +15,9 @@ export default function App() {
     apply('brand_bg',      '--brand-bg')
     apply('brand_surface', '--brand-surface')
     apply('brand_text',    '--brand-text')
+    menuApi.get('/settings/kitchen_name').then(({ data }) => {
+      if (data.value) document.title = data.value
+    }).catch(() => {})
   }, [])
 
   return (

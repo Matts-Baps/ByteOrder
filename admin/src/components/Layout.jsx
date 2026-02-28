@@ -22,6 +22,9 @@ export default function Layout() {
     apply('brand_bg',      '--brand-bg')
     apply('brand_surface', '--brand-surface')
     apply('brand_text',    '--brand-text')
+    api.get('/settings/kitchen_name').then(({ data }) => {
+      if (data.value) document.title = `${data.value} Admin`
+    }).catch(() => {})
   }, [])
 
   function logout() {
