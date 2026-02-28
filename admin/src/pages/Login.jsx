@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
@@ -7,7 +7,14 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [kitchenName, setKitchenName] = useState('ByteOrder')
   const navigate = useNavigate()
+
+  useEffect(() => {
+    axios.get('/api/settings/kitchen_name').then(({ data }) => {
+      if (data.value) setKitchenName(data.value)
+    }).catch(() => {})
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -27,7 +34,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-brand-bg flex items-center justify-center">
       <div className="bg-brand-surface rounded-xl shadow-lg p-8 w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-brand-text mb-1">ByteOrder</h1>
+        <h1 className="text-2xl font-bold text-brand-text mb-1">{kitchenName}</h1>
         <p className="text-gray-500 text-sm mb-6">Admin sign in</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

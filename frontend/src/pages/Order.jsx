@@ -14,9 +14,13 @@ export default function Order() {
   const [customIngredients, setCustomIngredients] = useState({}) // ingredient_id -> included bool
   const [basket, setBasket] = useState([])
   const [submitting, setSubmitting] = useState(false)
+  const [kitchenName, setKitchenName] = useState('ByteOrder')
 
   useEffect(() => {
     menuApi.get('/categories/').then(({ data }) => setCategories(data))
+    menuApi.get('/settings/kitchen_name').then(({ data }) => {
+      if (data.value) setKitchenName(data.value)
+    }).catch(() => {})
   }, [])
 
   function startCustomise(item) {
@@ -71,7 +75,7 @@ export default function Order() {
             else if (step === STEPS.BASKET) setStep(STEPS.CATEGORY)
           }} className="text-white text-xl">←</button>
         )}
-        <h1 className="text-xl font-bold">ByteOrder</h1>
+        <h1 className="text-xl font-bold">{kitchenName}</h1>
         {basket.length > 0 && step !== STEPS.BASKET && (
           <button
             onClick={() => setStep(STEPS.BASKET)}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 
@@ -12,6 +12,7 @@ const nav = [
 
 export default function Layout() {
   const navigate = useNavigate()
+  const [kitchenName, setKitchenName] = useState('ByteOrder')
 
   useEffect(() => {
     const apply = (key, prop) =>
@@ -23,7 +24,10 @@ export default function Layout() {
     apply('brand_surface', '--brand-surface')
     apply('brand_text',    '--brand-text')
     api.get('/settings/kitchen_name').then(({ data }) => {
-      if (data.value) document.title = `${data.value} Admin`
+      if (data.value) {
+        setKitchenName(data.value)
+        document.title = `${data.value} Admin`
+      }
     }).catch(() => {})
   }, [])
 
@@ -36,7 +40,7 @@ export default function Layout() {
     <div className="min-h-screen bg-brand-bg flex flex-col">
       <header className="bg-brand-600 text-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <span className="text-xl font-bold tracking-tight">ByteOrder Admin</span>
+          <span className="text-xl font-bold tracking-tight">{kitchenName} Admin</span>
           <button onClick={logout} className="text-sm underline hover:no-underline">Log out</button>
         </div>
       </header>
