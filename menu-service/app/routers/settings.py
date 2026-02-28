@@ -36,8 +36,10 @@ def _validate_printer_url(url: str) -> None:
 
     try:
         addr = ipaddress.ip_address(host)
-        if addr.is_loopback or addr.is_private or addr.is_link_local or addr.is_reserved:
-            raise HTTPException(status_code=400, detail="printer_url cannot point to a private or loopback address")
+        # Allow private LAN IPs (printer lives on the local network).
+        # Block only loopback (127.x, ::1) and link-local (169.254.x — cloud metadata).
+        if addr.is_loopback or addr.is_link_local:
+            raise HTTPException(status_code=400, detail="printer_url cannot point to a loopback or link-local address")
     except ValueError:
         pass  # Not an IP literal — hostname validation above is sufficient
 
