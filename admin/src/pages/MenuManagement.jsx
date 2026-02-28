@@ -164,11 +164,17 @@ export default function MenuManagement() {
     load()
   }
 
-  async function toggleIngredient(item, ingId, currently) {
-    if (currently !== undefined) {
+  async function toggleIngredient(item, ingId, linked) {
+    if (!linked) {
+      // Not on item → add as optional topping (not pre-selected)
+      await api.post(`/menu/items/${item.id}/ingredients`, { ingredient_id: ingId, is_default: false })
+    } else if (!linked.is_default) {
+      // Optional → make it pre-selected by default
       await api.delete(`/menu/items/${item.id}/ingredients/${ingId}`)
-    } else {
       await api.post(`/menu/items/${item.id}/ingredients`, { ingredient_id: ingId, is_default: true })
+    } else {
+      // Pre-selected default → remove from item entirely
+      await api.delete(`/menu/items/${item.id}/ingredients/${ingId}`)
     }
     load()
   }
@@ -280,24 +286,29 @@ export default function MenuManagement() {
 
                   <div>
                     <p className="text-xs font-semibold text-gray-500 mb-1">Ingredients</p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 mb-1">
                       {ingredients.map(ing => {
                         const linked = item.item_ingredients?.find(ii => ii.ingredient.id === ing.id)
+                        const chipClass = !linked
+                          ? 'bg-white text-gray-500 border-gray-300 hover:border-brand-400'
+                          : linked.is_default
+                            ? 'bg-brand-600 text-white border-brand-600'
+                            : 'bg-brand-50 text-brand-700 border-brand-400'
                         return (
                           <button
                             key={ing.id}
                             onClick={() => toggleIngredient(item, ing.id, linked)}
-                            className={`text-xs px-2 py-1 rounded-full border transition-colors ${
-                              linked
-                                ? 'bg-brand-600 text-white border-brand-600'
-                                : 'bg-white text-gray-600 border-gray-300 hover:border-brand-400'
-                            }`}
+                            title={!linked ? 'Click to add as optional topping' : linked.is_default ? 'Pre-selected — click to remove' : 'Optional topping — click to make pre-selected'}
+                            className={`text-xs px-2 py-1 rounded-full border transition-colors ${chipClass}`}
                           >
                             {ing.name}
                           </button>
                         )
                       })}
                     </div>
+                    <p className="text-xs text-gray-400">
+                      Gray = not added · <span className="text-brand-600">Outlined</span> = optional topping · <span className="text-brand-600 font-semibold">Filled</span> = pre-selected
+                    </p>
                   </div>
 
                   <div className="mt-3 border-t pt-3">
