@@ -1,6 +1,9 @@
+import ipaddress
 import json
 import logging
 import time
+from urllib.parse import urlparse
+
 import requests
 import redis
 from sqlalchemy import create_engine, text
@@ -26,6 +29,31 @@ else:
     tracer = None
 
 engine = create_engine(settings.database_url)
+
+_BLOCKED_PRINTER_HOSTS = {
+    "localhost", "postgres", "redis", "menu-service", "order-service",
+    "admin", "print-service", "metadata.google.internal",
+}
+
+
+def _is_safe_printer_url(url: str) -> bool:
+    """Return True only if url is a safe http/https URL not pointing to internal resources."""
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        host = (parsed.hostname or "").lower()
+        if not host or host in _BLOCKED_PRINTER_HOSTS:
+            return False
+        try:
+            addr = ipaddress.ip_address(host)
+            if addr.is_loopback or addr.is_private or addr.is_link_local or addr.is_reserved:
+                return False
+        except ValueError:
+            pass
+        return True
+    except Exception:
+        return False
 
 
 def get_printer_url() -> str | None:
@@ -93,6 +121,9 @@ def process_order(message_data: bytes):
     printer_url = get_printer_url()
     if not printer_url:
         log.warning("No printer URL configured — order %s not printed", order.get("order_number"))
+        return
+    if not _is_safe_printer_url(printer_url):
+        log.error("Printer URL is not a safe external URL — refusing to connect for order %s", order.get("order_number"))
         return
 
     payload = format_order(order)

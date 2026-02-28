@@ -8,7 +8,7 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Unauthorised' })
   }
   try {
-    req.user = jwt.verify(header.slice(7), JWT_SECRET)
+    req.user = jwt.verify(header.slice(7), JWT_SECRET, { algorithms: ['HS256'] })
     next()
   } catch {
     res.status(401).json({ error: 'Invalid token' })

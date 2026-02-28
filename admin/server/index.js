@@ -12,6 +12,21 @@ if (process.env.OTEL_ENDPOINT) {
   require('./telemetry')
 }
 
+// Startup security check — refuse weak secrets in production
+const KNOWN_WEAK = new Set([
+  '', 'change-me-in-production', 'byteorder-dev-secret-change-in-production', 'byteorder',
+])
+if (process.env.NODE_ENV === 'production') {
+  if (KNOWN_WEAK.has(process.env.JWT_SECRET || '')) {
+    console.error('FATAL: JWT_SECRET is missing or is a known default. Set a strong unique secret before running in production.')
+    process.exit(1)
+  }
+  if (KNOWN_WEAK.has(process.env.ADMIN_DEFAULT_PASSWORD || '')) {
+    console.error('FATAL: ADMIN_DEFAULT_PASSWORD is missing or is a known default. Set a strong password before running in production.')
+    process.exit(1)
+  }
+}
+
 const app = express()
 const PORT = process.env.PORT || 3001
 

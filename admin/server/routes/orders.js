@@ -10,7 +10,7 @@ const ORDER_SERVICE = process.env.ORDER_SERVICE_URL || 'http://order-service:800
 // SSE proxy — must come before router.all() since axios buffers and cannot proxy SSE
 router.get('/queue/stream', (req, res) => {
   const token = req.headers.authorization?.slice(7) || req.query.token
-  try { jwt.verify(token, JWT_SECRET) }
+  try { jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) }
   catch { return res.status(401).json({ error: 'Unauthorised' }) }
 
   res.setHeader('Content-Type', 'text/event-stream')

@@ -22,7 +22,7 @@ async function ensureAdminTable() {
     const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'byteorder'
     const hash = await bcrypt.hash(defaultPassword, 12)
     await pool.query('INSERT INTO admin_users (username, password_hash) VALUES ($1, $2)', ['admin', hash])
-    console.log('Default admin user created: admin / ' + defaultPassword)
+    console.log('Default admin user created with username: admin')
   }
 }
 
@@ -39,7 +39,7 @@ router.post('/login', async (req, res) => {
     const user = rows[0]
     const valid = await bcrypt.compare(password, user.password_hash)
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' })
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '12h' })
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '12h', algorithm: 'HS256' })
     res.json({ token, username: user.username })
   } catch (err) {
     console.error(err)
@@ -51,7 +51,7 @@ router.post('/change-password', async (req, res) => {
   const header = req.headers.authorization
   if (!header) return res.status(401).json({ error: 'Unauthorised' })
   try {
-    const { id } = jwt.verify(header.slice(7), JWT_SECRET)
+    const { id } = jwt.verify(header.slice(7), JWT_SECRET, { algorithms: ['HS256'] })
     const { current_password, new_password } = req.body
     const { rows } = await pool.query('SELECT * FROM admin_users WHERE id = $1', [id])
     if (!rows.length) return res.status(404).json({ error: 'User not found' })

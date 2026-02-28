@@ -16,5 +16,6 @@ ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
 COPY server ./server
 COPY --from=builder /app/dist ./dist
+USER node
 EXPOSE 3001
 CMD ["node", "server/index.js"]

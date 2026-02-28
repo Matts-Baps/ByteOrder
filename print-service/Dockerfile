@@ -8,4 +8,7 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 
 COPY app ./app
 
+RUN useradd --system --no-create-home appuser
+USER appuser
+
 CMD ["python", "-m", "app.main"]

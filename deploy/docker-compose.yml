@@ -32,7 +32,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "9000:8000"
+      - "127.0.0.1:9000:8000"
 
   order-service:
     build:
@@ -48,7 +48,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "9001:8001"
+      - "127.0.0.1:9001:8001"
 
   print-service:
     build:
