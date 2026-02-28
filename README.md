@@ -175,7 +175,7 @@ Note the machine's local IP address (e.g. `192.168.1.100`). The server listens o
 
 Enter the full URL, e.g.:
 
-```
+```text
 http://192.168.1.100:8080
 ```
 
