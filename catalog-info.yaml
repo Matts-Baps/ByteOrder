@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: byteorder
+  description: A home kitchen ordering system
+  annotations:
+    github.com/project-slug: proffalken/ByteOrder
+spec:
+  type: service
+  owner: user:default/proffalken
+  lifecycle: production
+  dependsOn:
+    - component:default/ble-printer-server
