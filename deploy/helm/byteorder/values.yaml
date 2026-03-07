@@ -11,8 +11,9 @@ postgres:
   existingSecret: ""
   existingSecretKey: "uri"
 
-jwtSecret: change-me-in-production
-adminDefaultPassword: byteorder
+clerk:
+  publishableKey: ""
+  secretKey: ""
 
 otelEndpoint: ""
 
