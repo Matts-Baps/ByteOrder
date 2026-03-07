@@ -31,11 +31,14 @@ export default function TrackOrder() {
     setError('')
     try {
       const { data } = await orderApi.get(`/orders/${id}`)
+      const normalizedStatus = data.status === 'completed' ? 'ready' : data.status
       setOrder(data)
-      setStatus(data.status)
-      prevStatusRef.current = data.status
+      setStatus(normalizedStatus)
+      prevStatusRef.current = normalizedStatus
       setQueuePos(data.queue_position)
-      if (Notification.permission === 'default') Notification.requestPermission()
+      if ('Notification' in window && window.isSecureContext && Notification.permission === 'default') {
+        Notification.requestPermission()
+      }
       subscribeToUpdates(id)
     } catch {
       setError('Order not found. Check your order number.')
@@ -50,15 +53,16 @@ export default function TrackOrder() {
       try {
         const data = JSON.parse(e.data)
         if (data.status) {
-          if (data.status === 'ready' && prevStatusRef.current !== 'ready') {
-            if (Notification.permission === 'granted') {
+          const normalizedStatus = data.status === 'completed' ? 'ready' : data.status
+          if (normalizedStatus === 'ready' && prevStatusRef.current !== 'ready') {
+            if ('Notification' in window && window.isSecureContext && Notification.permission === 'granted') {
               new Notification('Your order is ready!', {
                 body: 'Come and collect your order!',
               })
             }
           }
-          prevStatusRef.current = data.status
-          setStatus(data.status)
+          prevStatusRef.current = normalizedStatus
+          setStatus(normalizedStatus)
         }
         if (data.queue_position !== undefined) setQueuePos(data.queue_position)
       } catch {}
