@@ -3,9 +3,16 @@ const axios = require('axios')
 
 const router = express.Router()
 const MENU_SERVICE = process.env.MENU_SERVICE_URL || 'http://menu-service:8000'
+const AUTH_MODE = process.env.AUTH_MODE || 'cloud'
+
+function getKitchenId(req) {
+  return AUTH_MODE === 'self-hosted'
+    ? (process.env.DEFAULT_KITCHEN_ID || 'default')
+    : req.auth?.orgId
+}
 
 router.all('/*', async (req, res) => {
-  const kitchenId = req.auth?.orgId
+  const kitchenId = getKitchenId(req)
   if (!kitchenId) {
     return res.status(403).json({ error: 'No organization selected' })
   }
