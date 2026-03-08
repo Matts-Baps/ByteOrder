@@ -87,6 +87,7 @@ def create_order(data: schemas.OrderIn, db: Session = Depends(get_db), kitchen_i
         "order_id": order.id,
         "order_number": order.order_number,
         "customer_name": order.customer_name,
+        "kitchen_id": order.kitchen_id,
         "items": [
             {
                 "name": oi.menu_item_name,
