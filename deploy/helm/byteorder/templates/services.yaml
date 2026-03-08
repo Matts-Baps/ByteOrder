@@ -15,6 +15,19 @@ spec:
       labels:
         app: byteorder-{{ $svc }}
     spec:
+      {{- $pullSecrets := list -}}
+      {{- if $.Values.imagePullSecret -}}
+        {{- $pullSecrets = append $pullSecrets $.Values.imagePullSecret -}}
+      {{- end -}}
+      {{- range $.Values.imagePullSecrets -}}
+        {{- $pullSecrets = append $pullSecrets . -}}
+      {{- end -}}
+      {{- if $pullSecrets }}
+      imagePullSecrets:
+        {{- range $pullSecrets }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
       containers:
         - name: {{ $svc }}
           image: {{ $.Values.registry }}/{{ $svc }}:{{ $.Values.imageTag }}
@@ -43,10 +56,16 @@ spec:
               value: http://byteorder-menu-service:8000
             - name: ORDER_SERVICE_URL
               value: http://byteorder-order-service:8001
-            - name: JWT_SECRET
-              value: {{ $.Values.jwtSecret | quote }}
-            - name: ADMIN_DEFAULT_PASSWORD
-              value: {{ $.Values.adminDefaultPassword | quote }}
+            - name: CLERK_PUBLISHABLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ if $.Values.clerk.existingSecretName }}{{ $.Values.clerk.existingSecretName }}{{ else }}byteorder-clerk{{ end }}
+                  key: publishable-key
+            - name: CLERK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ if $.Values.clerk.existingSecretName }}{{ $.Values.clerk.existingSecretName }}{{ else }}byteorder-clerk{{ end }}
+                  key: secret-key
             {{- end }}
           {{- if eq $svc "frontend" }}
           volumeMounts:

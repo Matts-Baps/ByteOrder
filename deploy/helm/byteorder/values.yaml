@@ -11,8 +11,20 @@ postgres:
   existingSecret: ""
   existingSecretKey: "uri"
 
-jwtSecret: change-me-in-production
-adminDefaultPassword: byteorder
+clerk:
+  # Option A: provide keys directly (a Secret named byteorder-clerk will be created)
+  publishableKey: ""
+  secretKey: ""
+  # Option B: reference an existing Secret (takes precedence; inline keys are ignored)
+  # The referenced Secret must contain keys "publishable-key" and "secret-key"
+  existingSecretName: ""
+
+# Name of an existing imagePullSecret for pulling images from a private registry
+# e.g. a GHCR PAT secret created with:
+#   kubectl create secret docker-registry ghcr-pull-secret \
+#     --docker-server=ghcr.io --docker-username=<user> --docker-password=<PAT>
+imagePullSecret: ""   # single secret name (shorthand)
+imagePullSecrets: [] # list of secret names (use either or both)
 
 otelEndpoint: ""
 

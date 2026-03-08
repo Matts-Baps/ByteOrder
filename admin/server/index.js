@@ -6,24 +6,16 @@ if (process.env.OTEL_ENDPOINT) {
 const express = require('express')
 const cors = require('cors')
 const path = require('path')
-const authRoutes = require('./routes/auth')
+const { clerkMiddleware, requireAuth } = require('@clerk/express')
 const menuProxy = require('./routes/menu')
 const orderProxy = require('./routes/orders')
 const settingsProxy = require('./routes/settings')
-const { requireAuth } = require('./middleware/auth')
 
-// Startup security check — refuse weak JWT secret in production.
-// ADMIN_DEFAULT_PASSWORD is a one-time DB seed value (only used when the
-// admin_users table is empty) so it is not checked here; change the admin
-// password via the UI after first login instead.
-const KNOWN_WEAK_JWT = new Set([
-  '', 'change-me-in-production', 'byteorder-dev-secret-change-in-production', 'byteorder',
-])
-if (process.env.NODE_ENV === 'production') {
-  if (KNOWN_WEAK_JWT.has(process.env.JWT_SECRET || '')) {
-    console.error('FATAL: JWT_SECRET is missing or is a known default. Set a strong unique secret before running in production.')
-    process.exit(1)
-  }
+const requiredEnv = ['CLERK_PUBLISHABLE_KEY', 'CLERK_SECRET_KEY']
+const missingEnv = requiredEnv.filter(name => !process.env[name])
+if (missingEnv.length) {
+  console.error(`FATAL: Missing required Clerk configuration: ${missingEnv.join(', ')}`)
+  process.exit(1)
 }
 
 const app = express()
@@ -31,14 +23,17 @@ const PORT = process.env.PORT || 3001
 
 app.use(cors())
 app.use(express.json())
+app.use(clerkMiddleware())
 
-// Auth (public)
-app.use('/api/auth', authRoutes)
+// Public: exposes only the publishable key (safe to include in browser)
+app.get('/api/config', (req, res) => {
+  res.json({ clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY })
+})
 
 // Protected API proxies
-app.use('/api/menu', requireAuth, menuProxy)
-app.use('/api/orders', requireAuth, orderProxy)
-app.use('/api/settings', requireAuth, settingsProxy)
+app.use('/api/menu', requireAuth(), menuProxy)
+app.use('/api/orders', requireAuth(), orderProxy)
+app.use('/api/settings', requireAuth(), settingsProxy)
 
 // Serve built frontend in production
 if (process.env.NODE_ENV === 'production') {

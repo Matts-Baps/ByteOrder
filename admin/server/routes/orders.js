@@ -1,18 +1,13 @@
 const http = require('http')
 const express = require('express')
 const axios = require('axios')
-const jwt = require('jsonwebtoken')
-const { JWT_SECRET } = require('../middleware/auth')
 
 const router = express.Router()
 const ORDER_SERVICE = process.env.ORDER_SERVICE_URL || 'http://order-service:8001'
 
-// SSE proxy — must come before router.all() since axios buffers and cannot proxy SSE
+// SSE proxy — must come before router.all() since axios buffers and cannot proxy SSE.
+// Auth is already enforced by requireAuth() in index.js before this router is reached.
 router.get('/queue/stream', (req, res) => {
-  const token = req.headers.authorization?.slice(7) || req.query.token
-  try { jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) }
-  catch { return res.status(401).json({ error: 'Unauthorised' }) }
-
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Connection', 'keep-alive')
