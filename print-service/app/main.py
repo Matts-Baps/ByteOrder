@@ -64,20 +64,26 @@ def _is_safe_printer_url(url: str) -> bool:
         return False
 
 
-def get_printer_url() -> str | None:
+def get_printer_url(kitchen_id: str) -> str | None:
     with engine.connect() as conn:
-        row = conn.execute(text("SELECT value FROM settings WHERE key = 'printer_url'")).fetchone()
+        row = conn.execute(
+            text("SELECT value FROM settings WHERE kitchen_id = :kid AND key = 'printer_url'"),
+            {"kid": kitchen_id},
+        ).fetchone()
     return row[0] if row and row[0] else None
 
 
-def get_kitchen_name() -> str:
+def get_kitchen_name(kitchen_id: str) -> str:
     with engine.connect() as conn:
-        row = conn.execute(text("SELECT value FROM settings WHERE key = 'kitchen_name'")).fetchone()
+        row = conn.execute(
+            text("SELECT value FROM settings WHERE kitchen_id = :kid AND key = 'kitchen_name'"),
+            {"kid": kitchen_id},
+        ).fetchone()
     return row[0] if row and row[0] else "ByteOrder Kitchen"
 
 
-def format_order(order: dict) -> dict:
-    kitchen = get_kitchen_name()
+def format_order(order: dict, kitchen_id: str) -> dict:
+    kitchen = get_kitchen_name(kitchen_id)
     lines = [
         f"{kitchen}",
         f"Order: {order['order_number']}",
@@ -124,17 +130,22 @@ def process_order(message_data: bytes):
         log.error("Invalid JSON in order message")
         return
 
-    log.info("Processing order %s for %s", order.get("order_number"), order.get("customer_name"))
+    kitchen_id = order.get("kitchen_id", "")
+    if not kitchen_id:
+        log.warning("Order %s has no kitchen_id — skipping", order.get("order_number"))
+        return
 
-    printer_url = get_printer_url()
+    log.info("Processing order %s for %s (kitchen: %s)", order.get("order_number"), order.get("customer_name"), kitchen_id)
+
+    printer_url = get_printer_url(kitchen_id)
     if not printer_url:
-        log.warning("No printer URL configured — order %s not printed", order.get("order_number"))
+        log.warning("No printer URL configured for kitchen %s — order %s not printed", kitchen_id, order.get("order_number"))
         return
     if not _is_safe_printer_url(printer_url):
         log.error("Printer URL is not a safe external URL — refusing to connect for order %s", order.get("order_number"))
         return
 
-    payload = format_order(order)
+    payload = format_order(order, kitchen_id)
 
     if tracer:
         with tracer.start_as_current_span("print_order") as span:
