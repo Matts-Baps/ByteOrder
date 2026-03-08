@@ -4,11 +4,18 @@ const axios = require('axios')
 
 const router = express.Router()
 const ORDER_SERVICE = process.env.ORDER_SERVICE_URL || 'http://order-service:8001'
+const AUTH_MODE = process.env.AUTH_MODE || 'cloud'
+
+function getKitchenId(req) {
+  return AUTH_MODE === 'self-hosted'
+    ? (process.env.DEFAULT_KITCHEN_ID || 'default')
+    : req.auth?.orgId
+}
 
 // SSE proxy — must come before router.all() since axios buffers and cannot proxy SSE.
 // Auth is already enforced by requireAuth() in index.js before this router is reached.
 router.get('/queue/stream', (req, res) => {
-  const kitchenId = req.auth?.orgId
+  const kitchenId = getKitchenId(req)
   if (!kitchenId) {
     return res.status(403).json({ error: 'No organization selected' })
   }
@@ -35,7 +42,7 @@ router.get('/queue/stream', (req, res) => {
 })
 
 router.all('/*', async (req, res) => {
-  const kitchenId = req.auth?.orgId
+  const kitchenId = getKitchenId(req)
   if (!kitchenId) {
     return res.status(403).json({ error: 'No organization selected' })
   }

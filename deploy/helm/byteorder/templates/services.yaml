@@ -50,12 +50,15 @@ spec:
               value: {{ $.Values.otelEndpoint | quote }}
             - name: OTEL_SERVICE_NAME
               value: "byteorder-{{ $svc }}"
+            - name: AUTH_MODE
+              value: {{ $.Values.authMode | quote }}
             {{- end }}
             {{- if eq $svc "admin" }}
             - name: MENU_SERVICE_URL
               value: http://byteorder-menu-service:8000
             - name: ORDER_SERVICE_URL
               value: http://byteorder-order-service:8001
+            {{- if eq $.Values.authMode "cloud" }}
             - name: CLERK_PUBLISHABLE_KEY
               valueFrom:
                 secretKeyRef:
@@ -66,6 +69,32 @@ spec:
                 secretKeyRef:
                   name: {{ if $.Values.clerk.existingSecretName }}{{ $.Values.clerk.existingSecretName }}{{ else }}byteorder-clerk{{ end }}
                   key: secret-key
+            {{- else }}
+            {{- $selfHostedSecret := ternary $.Values.selfHosted.existingSecretName "byteorder-self-hosted" (ne $.Values.selfHosted.existingSecretName "") }}
+            - name: ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $selfHostedSecret }}
+                  key: admin-username
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $selfHostedSecret }}
+                  key: admin-password
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $selfHostedSecret }}
+                  key: jwt-secret
+            - name: DEFAULT_KITCHEN_ID
+              value: {{ $.Values.selfHosted.defaultKitchenId | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if or (eq $svc "menu-service") (eq $svc "order-service") }}
+            {{- if eq $.Values.authMode "self-hosted" }}
+            - name: DEFAULT_KITCHEN_ID
+              value: {{ $.Values.selfHosted.defaultKitchenId | quote }}
+            {{- end }}
             {{- end }}
           {{- if eq $svc "frontend" }}
           volumeMounts:

@@ -11,6 +11,11 @@ postgres:
   existingSecret: ""
   existingSecretKey: "uri"
 
+# authMode controls which authentication backend is used.
+# "cloud"       — multi-tenant SaaS mode; requires Clerk keys below.
+# "self-hosted" — single-tenant mode; uses ADMIN_USERNAME/ADMIN_PASSWORD env vars.
+authMode: cloud
+
 clerk:
   # Option A: provide keys directly (a Secret named byteorder-clerk will be created)
   publishableKey: ""
@@ -18,6 +23,18 @@ clerk:
   # Option B: reference an existing Secret (takes precedence; inline keys are ignored)
   # The referenced Secret must contain keys "publishable-key" and "secret-key"
   existingSecretName: ""
+
+selfHosted:
+  # Credentials for the admin UI login (self-hosted mode only).
+  # Option A: provide inline (a Secret named byteorder-self-hosted will be created)
+  adminUsername: "admin"
+  adminPassword: ""   # required in self-hosted mode
+  jwtSecret: ""       # required in self-hosted mode; use a long random string
+  # Option B: reference an existing Secret (takes precedence; inline values are ignored)
+  # The referenced Secret must contain keys "admin-username", "admin-password", "jwt-secret"
+  existingSecretName: ""
+  # kitchen_id used for all requests in single-tenant mode (default: "default")
+  defaultKitchenId: "default"
 
 # Name of an existing imagePullSecret for pulling images from a private registry
 # e.g. a GHCR PAT secret created with:
