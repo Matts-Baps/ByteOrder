@@ -13,12 +13,14 @@ data:
         location /api/ {
             proxy_pass http://byteorder-menu-service:8000/;
             proxy_set_header Host $host;
+            proxy_set_header X-Kitchen-ID "{{ .Values.kitchenId }}";
         }
 
         # Proxy order-service API calls
         location /orders-api/ {
             proxy_pass http://byteorder-order-service:8001/;
             proxy_set_header Host $host;
+            proxy_set_header X-Kitchen-ID "{{ .Values.kitchenId }}";
             # SSE support
             proxy_buffering off;
             proxy_cache off;

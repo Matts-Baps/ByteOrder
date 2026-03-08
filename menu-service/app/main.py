@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 import os
 from fastapi import FastAPI
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
@@ -28,9 +29,35 @@ if _otel_exporter_endpoint or settings.otel_endpoint:
     trace.set_tracer_provider(provider)
 
 
+def _run_migrations():
+    """Idempotent schema migrations. Safe to run on every startup."""
+    with engine.connect() as conn:
+        # Add kitchen_id to tables that predate multi-tenancy
+        conn.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS kitchen_id VARCHAR NOT NULL DEFAULT ''"))
+        conn.execute(text("ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS kitchen_id VARCHAR NOT NULL DEFAULT ''"))
+        conn.execute(text("ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS kitchen_id VARCHAR NOT NULL DEFAULT ''"))
+        # Migrate settings from single-column PK (key) to composite PK (kitchen_id, key)
+        conn.execute(text("ALTER TABLE settings ADD COLUMN IF NOT EXISTS kitchen_id VARCHAR NOT NULL DEFAULT ''"))
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM pg_constraint
+                    WHERE conrelid = 'settings'::regclass
+                    AND contype = 'p'
+                    AND array_length(conkey, 1) = 1
+                ) THEN
+                    ALTER TABLE settings DROP CONSTRAINT settings_pkey;
+                    ALTER TABLE settings ADD PRIMARY KEY (kitchen_id, key);
+                END IF;
+            END $$
+        """))
+        conn.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    _run_migrations()
     yield
 
 

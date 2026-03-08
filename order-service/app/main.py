@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 import os
 from fastapi import FastAPI
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
@@ -24,9 +25,17 @@ if _otel_exporter_endpoint or settings.otel_endpoint:
     trace.set_tracer_provider(provider)
 
 
+def _run_migrations():
+    """Idempotent schema migrations. Safe to run on every startup."""
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS kitchen_id VARCHAR NOT NULL DEFAULT ''"))
+        conn.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    _run_migrations()
     yield
 
 

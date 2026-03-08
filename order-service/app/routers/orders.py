@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.database import get_db, SessionLocal
 from app.redis_client import get_redis
+from app.auth import get_kitchen_id
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -33,6 +34,7 @@ def _queue_position(order: models.Order, db: Session) -> int | None:
     ahead = (
         db.query(models.Order)
         .filter(
+            models.Order.kitchen_id == order.kitchen_id,
             models.Order.status.in_(ACTIVE_STATUSES),
             models.Order.created_at < order.created_at,
         )
@@ -42,10 +44,11 @@ def _queue_position(order: models.Order, db: Session) -> int | None:
 
 
 @router.post("/", response_model=schemas.OrderOut, status_code=201)
-def create_order(data: schemas.OrderIn, db: Session = Depends(get_db)):
+def create_order(data: schemas.OrderIn, db: Session = Depends(get_db), kitchen_id: str = Depends(get_kitchen_id)):
     order = models.Order(
         order_number=_next_order_number(db),
         customer_name=data.customer_name,
+        kitchen_id=kitchen_id,
     )
     db.add(order)
     db.flush()
@@ -106,10 +109,10 @@ def create_order(data: schemas.OrderIn, db: Session = Depends(get_db)):
 
 
 @router.get("/queue", response_model=list[schemas.OrderOut])
-def get_queue(db: Session = Depends(get_db)):
+def get_queue(db: Session = Depends(get_db), kitchen_id: str = Depends(get_kitchen_id)):
     orders = (
         db.query(models.Order)
-        .filter(models.Order.status.in_(ACTIVE_STATUSES))
+        .filter(models.Order.kitchen_id == kitchen_id, models.Order.status.in_(ACTIVE_STATUSES))
         .order_by(models.Order.created_at)
         .all()
     )
@@ -143,8 +146,8 @@ async def queue_stream():
 
 
 @router.get("/history", response_model=list[schemas.OrderOut])
-def get_history(date: str | None = None, db: Session = Depends(get_db)):
-    q = db.query(models.Order).filter(models.Order.status == "completed")
+def get_history(date: str | None = None, db: Session = Depends(get_db), kitchen_id: str = Depends(get_kitchen_id)):
+    q = db.query(models.Order).filter(models.Order.kitchen_id == kitchen_id, models.Order.status == "completed")
     if date:
         try:
             d = datetime.strptime(date, "%Y-%m-%d").date()
@@ -157,8 +160,8 @@ def get_history(date: str | None = None, db: Session = Depends(get_db)):
 
 
 @router.get("/{order_id}", response_model=schemas.OrderOut)
-def get_order(order_id: int, db: Session = Depends(get_db)):
-    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+def get_order(order_id: int, db: Session = Depends(get_db), kitchen_id: str = Depends(get_kitchen_id)):
+    order = db.query(models.Order).filter(models.Order.id == order_id, models.Order.kitchen_id == kitchen_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     out = schemas.OrderOut.model_validate(order)
@@ -167,12 +170,12 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{order_id}/status", response_model=schemas.OrderOut)
-def update_status(order_id: int, data: schemas.OrderStatusUpdate, db: Session = Depends(get_db)):
+def update_status(order_id: int, data: schemas.OrderStatusUpdate, db: Session = Depends(get_db), kitchen_id: str = Depends(get_kitchen_id)):
     valid = ("pending", "in_progress", "ready", "completed")
     if data.status not in valid:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid}")
 
-    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    order = db.query(models.Order).filter(models.Order.id == order_id, models.Order.kitchen_id == kitchen_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
@@ -196,8 +199,8 @@ def update_status(order_id: int, data: schemas.OrderStatusUpdate, db: Session = 
 
 
 @router.get("/{order_id}/stream")
-async def order_stream(order_id: int, db: Session = Depends(get_db)):
-    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+async def order_stream(order_id: int, db: Session = Depends(get_db), kitchen_id: str = Depends(get_kitchen_id)):
+    order = db.query(models.Order).filter(models.Order.id == order_id, models.Order.kitchen_id == kitchen_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 

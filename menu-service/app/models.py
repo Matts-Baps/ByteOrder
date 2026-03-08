@@ -6,7 +6,8 @@ from app.database import Base
 
 class Setting(Base):
     __tablename__ = "settings"
-    key = Column(String, primary_key=True)
+    kitchen_id = Column(String, primary_key=True, nullable=False)
+    key = Column(String, primary_key=True, nullable=False)
     value = Column(Text, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -14,6 +15,7 @@ class Setting(Base):
 class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True)
+    kitchen_id = Column(String, nullable=False, index=True)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     sort_order = Column(Integer, default=0)
@@ -24,6 +26,7 @@ class Category(Base):
 class MenuItem(Base):
     __tablename__ = "menu_items"
     id = Column(Integer, primary_key=True, index=True)
+    kitchen_id = Column(String, nullable=False, index=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
@@ -37,6 +40,7 @@ class MenuItem(Base):
 class Ingredient(Base):
     __tablename__ = "ingredients"
     id = Column(Integer, primary_key=True, index=True)
+    kitchen_id = Column(String, nullable=False, index=True)
     name = Column(String, nullable=False)
     active = Column(Boolean, default=True)
     item_ingredients = relationship("MenuItemIngredient", back_populates="ingredient")
