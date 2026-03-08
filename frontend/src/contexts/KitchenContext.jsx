@@ -8,32 +8,51 @@ export function useKitchen() {
   return useContext(KitchenContext)
 }
 
-export function KitchenProvider({ children }) {
-  const { slug } = useParams()
+function loadBrandSettings() {
+  const apply = (key, prop) =>
+    menuApi.get(`/settings/${key}`).then(({ data: s }) => {
+      if (s.value) document.documentElement.style.setProperty(prop, s.value)
+    }).catch(() => {})
+  apply('brand_primary', '--brand-primary')
+  apply('brand_bg',      '--brand-bg')
+  apply('brand_surface', '--brand-surface')
+  apply('brand_text',    '--brand-text')
+  menuApi.get('/settings/kitchen_name').then(({ data: s }) => {
+    if (s.value) document.title = s.value
+  }).catch(() => {})
+}
+
+/**
+ * KitchenProvider resolves the active kitchen in one of two ways:
+ *
+ * Cloud (slug-based):   rendered inside /k/:slug/* — reads slug from URL params,
+ *                        calls GET /slug/:slug to resolve kitchen_id.
+ *
+ * Self-hosted (direct): pass fixedKitchenId="default" — skips the slug lookup
+ *                        and uses the ID directly. slug will be null in context.
+ */
+export function KitchenProvider({ children, fixedKitchenId = null }) {
+  const params = useParams()
+  const slug = fixedKitchenId ? null : (params.slug ?? null)
   const [kitchenId, setKitchenIdState] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    if (fixedKitchenId) {
+      setKitchenId(fixedKitchenId)
+      setKitchenIdState(fixedKitchenId)
+      loadBrandSettings()
+      return
+    }
     if (!slug) return
     menuApi.get(`/slug/${slug}`)
       .then(({ data }) => {
         setKitchenId(data.kitchen_id)
         setKitchenIdState(data.kitchen_id)
-        // Apply brand settings and page title now that kitchen_id header is set
-        const apply = (key, prop) =>
-          menuApi.get(`/settings/${key}`).then(({ data: s }) => {
-            if (s.value) document.documentElement.style.setProperty(prop, s.value)
-          }).catch(() => {})
-        apply('brand_primary', '--brand-primary')
-        apply('brand_bg',      '--brand-bg')
-        apply('brand_surface', '--brand-surface')
-        apply('brand_text',    '--brand-text')
-        menuApi.get('/settings/kitchen_name').then(({ data: s }) => {
-          if (s.value) document.title = s.value
-        }).catch(() => {})
+        loadBrandSettings()
       })
       .catch(() => setError('Kitchen not found'))
-  }, [slug])
+  }, [slug, fixedKitchenId])
 
   if (error) {
     return (

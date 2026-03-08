@@ -55,10 +55,27 @@ def _run_migrations():
         conn.commit()
 
 
+def _seed_self_hosted():
+    """In self-hosted mode, ensure a 'default' kitchen row exists so the
+    customer frontend can load brand settings without any manual setup."""
+    if os.getenv("AUTH_MODE") != "self-hosted":
+        return
+    kitchen_id = os.getenv("DEFAULT_KITCHEN_ID", "default")
+    slug = os.getenv("DEFAULT_KITCHEN_SLUG", kitchen_id)
+    with engine.connect() as conn:
+        conn.execute(text("""
+            INSERT INTO kitchens (kitchen_id, slug)
+            VALUES (:kid, :slug)
+            ON CONFLICT DO NOTHING
+        """), {"kid": kitchen_id, "slug": slug})
+        conn.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     _run_migrations()
+    _seed_self_hosted()
     yield
 
 

@@ -35,6 +35,10 @@ selfHosted:
   existingSecretName: ""
   # kitchen_id used for all requests in single-tenant mode (default: "default")
   defaultKitchenId: "default"
+  # slug seeded into the kitchens table on first start — set this to something
+  # meaningful (e.g. your restaurant name) if you want a nicer /k/<slug> URL
+  # as a fallback. Defaults to the value of defaultKitchenId.
+  defaultKitchenSlug: ""
 
 # Name of an existing imagePullSecret for pulling images from a private registry
 # e.g. a GHCR PAT secret created with:

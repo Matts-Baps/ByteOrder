@@ -96,6 +96,12 @@ spec:
               value: {{ $.Values.selfHosted.defaultKitchenId | quote }}
             {{- end }}
             {{- end }}
+            {{- if eq $svc "menu-service" }}
+            {{- if eq $.Values.authMode "self-hosted" }}
+            - name: DEFAULT_KITCHEN_SLUG
+              value: {{ $.Values.selfHosted.defaultKitchenSlug | default $.Values.selfHosted.defaultKitchenId | quote }}
+            {{- end }}
+            {{- end }}
           {{- if eq $svc "frontend" }}
           volumeMounts:
             - name: nginx-config
