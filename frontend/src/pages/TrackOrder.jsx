@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { orderApi } from '../lib/api'
+import { useKitchen } from '../contexts/KitchenContext'
 
 const STATUS_STEPS = ['pending', 'in_progress', 'ready']
 const STATUS_LABELS = { pending: 'Order received', in_progress: 'Being prepared', ready: 'Ready to collect!' }
@@ -12,8 +13,9 @@ const STATUS_DESCRIPTIONS = {
 const STATUS_EMOJI = { pending: '⏳', in_progress: '👨‍🍳', ready: '🎉' }
 
 export default function TrackOrder() {
-  const { orderId } = useParams()
+  const { publicId } = useParams()
   const navigate = useNavigate()
+  const { kitchenId, slug } = useKitchen()
   const [lookupId, setLookupId] = useState('')
   const [order, setOrder] = useState(null)
   const [status, setStatus] = useState(null)
@@ -23,14 +25,14 @@ export default function TrackOrder() {
   const prevStatusRef = useRef(null)
 
   useEffect(() => {
-    if (orderId) loadOrder(orderId)
+    if (publicId) loadOrder(publicId)
     return () => esRef.current?.close()
-  }, [orderId])
+  }, [publicId, kitchenId])
 
   async function loadOrder(id) {
     setError('')
     try {
-      const { data } = await orderApi.get(`/orders/${id}`)
+      const { data } = await orderApi.get(`/orders/track/${id}`)
       const normalizedStatus = data.status === 'completed' ? 'ready' : data.status
       setOrder(data)
       setStatus(normalizedStatus)
@@ -47,7 +49,9 @@ export default function TrackOrder() {
 
   function subscribeToUpdates(id) {
     esRef.current?.close()
-    const es = new EventSource(`/orders-api/orders/${id}/stream`)
+    const es = new EventSource(
+      `/orders-api/orders/track/${id}/stream?kitchen_id=${encodeURIComponent(kitchenId)}`
+    )
     esRef.current = es
     es.onmessage = e => {
       try {
@@ -72,7 +76,7 @@ export default function TrackOrder() {
   function handleLookup(e) {
     e.preventDefault()
     if (!lookupId.trim()) return
-    navigate(`/track/${lookupId.trim()}`)
+    navigate(`/k/${slug}/track/${lookupId.trim()}`)
   }
 
   const currentStep = STATUS_STEPS.indexOf(status)
@@ -80,18 +84,18 @@ export default function TrackOrder() {
   return (
     <div className="min-h-screen bg-brand-bg">
       <header className="bg-brand-600 text-white px-4 py-4">
-        <Link to="/" className="text-white text-xl">←</Link>
+        <Link to={`/k/${slug}/`} className="text-white text-xl">←</Link>
         <span className="text-xl font-bold ml-3">Track Order</span>
       </header>
 
       <div className="max-w-lg mx-auto px-4 py-8">
-        {!orderId ? (
+        {!publicId ? (
           <form onSubmit={handleLookup}>
             <h2 className="text-2xl font-bold text-brand-text mb-6">Find your order</h2>
             <input
               value={lookupId}
               onChange={e => setLookupId(e.target.value)}
-              placeholder="Enter your order ID"
+              placeholder="Enter your order tracking code"
               className="w-full border-2 border-gray-200 focus:border-brand-500 rounded-xl px-4 py-3 text-lg outline-none mb-4"
             />
             <button
@@ -107,7 +111,7 @@ export default function TrackOrder() {
             {error ? (
               <div>
                 <p className="text-red-500 mb-4">{error}</p>
-                <Link to="/track" className="text-brand-600 underline">Try again</Link>
+                <Link to={`/k/${slug}/track`} className="text-brand-600 underline">Try again</Link>
               </div>
             ) : (
               <p className="text-gray-400">Loading…</p>

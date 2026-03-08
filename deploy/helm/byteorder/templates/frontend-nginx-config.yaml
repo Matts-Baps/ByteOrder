@@ -10,17 +10,17 @@ data:
         index index.html;
 
         # Proxy menu-service API calls
+        # X-Kitchen-ID is set by the React frontend via axios headers
         location /api/ {
             proxy_pass http://byteorder-menu-service:8000/;
             proxy_set_header Host $host;
-            proxy_set_header X-Kitchen-ID "{{ .Values.kitchenId }}";
         }
 
         # Proxy order-service API calls
+        # X-Kitchen-ID is set by the React frontend; kitchen_id query param used for SSE
         location /orders-api/ {
             proxy_pass http://byteorder-order-service:8001/;
             proxy_set_header Host $host;
-            proxy_set_header X-Kitchen-ID "{{ .Values.kitchenId }}";
             # SSE support
             proxy_buffering off;
             proxy_cache off;

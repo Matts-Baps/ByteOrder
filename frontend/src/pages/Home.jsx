@@ -2,14 +2,17 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { orderApi, menuApi } from '../lib/api'
+import { useKitchen } from '../contexts/KitchenContext'
 
 export default function Home() {
+  const { kitchenId, slug } = useKitchen()
   const [queue, setQueue] = useState([])
   const [kitchenName, setKitchenName] = useState('ByteOrder Kitchen')
   const [logo, setLogo] = useState('')
   const [brandColor, setBrandColor] = useState('#ea580c')
-  const [orderUrl, setOrderUrl] = useState('')
   const esRef = useRef(null)
+
+  const orderUrl = `${window.location.origin}/k/${slug}/order`
 
   useEffect(() => {
     menuApi.get('/settings/kitchen_name').then(({ data }) => {
@@ -24,22 +27,14 @@ export default function Home() {
       if (data.value) setBrandColor(data.value)
     }).catch(() => {})
 
-    menuApi.get('/settings/frontend_url').then(({ data }) => {
-      const base = data.value || window.location.origin
-      setOrderUrl(`${base.replace(/\/$/, '')}/order`)
-    }).catch(() => {
-      setOrderUrl(`${window.location.origin}/order`)
-    })
-
     loadQueue()
 
-    // Subscribe to queue updates via SSE
-    const es = new EventSource('/orders-api/orders/queue/stream')
+    const es = new EventSource(`/orders-api/orders/queue/stream?kitchen_id=${encodeURIComponent(kitchenId)}`)
     esRef.current = es
     es.onmessage = () => loadQueue()
 
     return () => es.close()
-  }, [])
+  }, [kitchenId])
 
   async function loadQueue() {
     try {
@@ -66,13 +61,9 @@ export default function Home() {
       <p className="text-gray-500 mb-10 text-lg">Scan to order from your phone</p>
 
       <div className="bg-brand-surface rounded-2xl shadow-xl p-6 mb-10">
-        {orderUrl ? (
-          <QRCodeSVG value={orderUrl} size={220} fgColor={brandColor} />
-        ) : (
-          <div className="w-[220px] h-[220px] bg-gray-100 rounded animate-pulse" />
-        )}
+        <QRCodeSVG value={orderUrl} size={220} fgColor={brandColor} />
         <p className="text-center text-sm text-gray-400 mt-3">
-          or <Link to="/order" className="text-brand-600 underline">tap here</Link> to order
+          or <Link to={`/k/${slug}/order`} className="text-brand-600 underline">tap here</Link> to order
         </p>
       </div>
 
@@ -99,13 +90,13 @@ export default function Home() {
 
       <div className="mt-8 flex gap-4">
         <Link
-          to="/order"
+          to={`/k/${slug}/order`}
           className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-8 py-3 rounded-xl text-lg shadow transition-colors"
         >
           Place Order
         </Link>
         <Link
-          to="/track"
+          to={`/k/${slug}/track`}
           className="bg-white hover:bg-gray-50 text-brand-600 font-bold px-8 py-3 rounded-xl text-lg shadow border border-brand-200 transition-colors"
         >
           Track Order

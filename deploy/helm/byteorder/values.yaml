@@ -26,10 +26,6 @@ clerk:
 imagePullSecret: ""   # single secret name (shorthand)
 imagePullSecrets: [] # list of secret names (use either or both)
 
-# Clerk organization ID for this kitchen's customer-facing frontend.
-# nginx will inject this as the X-Kitchen-ID header on all proxied API requests.
-kitchenId: ""
-
 otelEndpoint: ""
 
 dash0:

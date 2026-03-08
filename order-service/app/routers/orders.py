@@ -159,6 +159,57 @@ def get_history(date: str | None = None, db: Session = Depends(get_db), kitchen_
     return q.order_by(models.Order.created_at.desc()).all()
 
 
+@router.get("/track/{public_id}", response_model=schemas.OrderOut)
+def get_order_by_public_id(public_id: str, db: Session = Depends(get_db), kitchen_id: str = Depends(get_kitchen_id)):
+    order = db.query(models.Order).filter(
+        models.Order.public_id == public_id,
+        models.Order.kitchen_id == kitchen_id,
+    ).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    out = schemas.OrderOut.model_validate(order)
+    out.queue_position = _queue_position(order, db)
+    return out
+
+
+@router.get("/track/{public_id}/stream")
+async def order_stream_by_public_id(public_id: str, db: Session = Depends(get_db), kitchen_id: str = Depends(get_kitchen_id)):
+    order = db.query(models.Order).filter(
+        models.Order.public_id == public_id,
+        models.Order.kitchen_id == kitchen_id,
+    ).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order_id = order.id
+
+    async def event_generator():
+        redis = get_redis()
+        pubsub = redis.pubsub()
+        pubsub.subscribe(f"order_status:{order_id}")
+        try:
+            current_db = SessionLocal()
+            try:
+                current = current_db.query(models.Order).filter(models.Order.id == order_id).first()
+                pos = _queue_position(current, current_db)
+                yield f"data: {json.dumps({'status': current.status, 'queue_position': pos})}\n\n"
+            finally:
+                current_db.close()
+
+            while True:
+                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=0)
+                if message:
+                    yield f"data: {message['data'].decode()}\n\n"
+                else:
+                    yield ": keepalive\n\n"
+                await asyncio.sleep(0.5)
+        finally:
+            pubsub.unsubscribe()
+            pubsub.close()
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 @router.get("/{order_id}", response_model=schemas.OrderOut)
 def get_order(order_id: int, db: Session = Depends(get_db), kitchen_id: str = Depends(get_kitchen_id)):
     order = db.query(models.Order).filter(models.Order.id == order_id, models.Order.kitchen_id == kitchen_id).first()

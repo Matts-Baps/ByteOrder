@@ -1,31 +1,34 @@
-import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { menuApi } from './lib/api'
+import { KitchenProvider } from './contexts/KitchenContext'
 import Home from './pages/Home'
 import Order from './pages/Order'
 import TrackOrder from './pages/TrackOrder'
 
-export default function App() {
-  useEffect(() => {
-    const apply = (key, prop) =>
-      menuApi.get(`/settings/${key}`).then(({ data }) => {
-        if (data.value) document.documentElement.style.setProperty(prop, data.value)
-      }).catch(() => {})
-    apply('brand_primary', '--brand-primary')
-    apply('brand_bg',      '--brand-bg')
-    apply('brand_surface', '--brand-surface')
-    apply('brand_text',    '--brand-text')
-    menuApi.get('/settings/kitchen_name').then(({ data }) => {
-      if (data.value) document.title = data.value
-    }).catch(() => {})
-  }, [])
+function KitchenRoutes() {
+  return (
+    <KitchenProvider>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/order" element={<Order />} />
+        <Route path="/track/:publicId" element={<TrackOrder />} />
+        <Route path="/track" element={<TrackOrder />} />
+      </Routes>
+    </KitchenProvider>
+  )
+}
 
+export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/order" element={<Order />} />
-      <Route path="/track" element={<TrackOrder />} />
-      <Route path="/track/:orderId" element={<TrackOrder />} />
+      <Route path="/k/:slug/*" element={<KitchenRoutes />} />
+      <Route path="*" element={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Welcome to ByteOrder</h1>
+            <p className="text-gray-500">Scan the QR code at your table to place an order.</p>
+          </div>
+        </div>
+      } />
     </Routes>
   )
 }

@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
@@ -7,6 +8,7 @@ from app.database import Base
 class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
+    public_id = Column(String, nullable=False, unique=True, index=True, default=lambda: str(uuid.uuid4()))
     kitchen_id = Column(String, nullable=False, index=True)
     order_number = Column(String, unique=True, nullable=False)
     customer_name = Column(String, nullable=False)

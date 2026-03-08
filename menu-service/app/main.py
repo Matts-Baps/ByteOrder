@@ -5,7 +5,7 @@ from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
-from app.routers import categories, items, ingredients, settings as settings_router
+from app.routers import categories, items, ingredients, settings as settings_router, kitchens
 
 # OpenTelemetry setup
 _otel_exporter_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
@@ -51,6 +51,7 @@ def _run_migrations():
                 END IF;
             END $$
         """))
+        # kitchens table is created by Base.metadata.create_all, no ALTER needed
         conn.commit()
 
 
@@ -74,6 +75,7 @@ app.include_router(categories.router)
 app.include_router(items.router)
 app.include_router(ingredients.router)
 app.include_router(settings_router.router)
+app.include_router(kitchens.router)
 
 if _otel_exporter_endpoint or settings.otel_endpoint:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor

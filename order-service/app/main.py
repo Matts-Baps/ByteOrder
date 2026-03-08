@@ -29,6 +29,20 @@ def _run_migrations():
     """Idempotent schema migrations. Safe to run on every startup."""
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS kitchen_id VARCHAR NOT NULL DEFAULT ''"))
+        conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS public_id VARCHAR"))
+        # Back-fill public_id for rows that predate this column, then enforce NOT NULL + UNIQUE
+        conn.execute(text("UPDATE orders SET public_id = gen_random_uuid()::text WHERE public_id IS NULL"))
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.table_constraints
+                    WHERE table_name = 'orders' AND constraint_name = 'orders_public_id_key'
+                ) THEN
+                    ALTER TABLE orders ALTER COLUMN public_id SET NOT NULL;
+                    ALTER TABLE orders ADD CONSTRAINT orders_public_id_key UNIQUE (public_id);
+                END IF;
+            END $$
+        """))
         conn.commit()
 
 

@@ -52,6 +52,7 @@ class OrderItemOut(BaseModel):
 
 class OrderOut(BaseModel):
     id: int
+    public_id: str
     order_number: str
     customer_name: str
     status: str

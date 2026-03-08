@@ -1,5 +1,29 @@
+import re
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+SLUG_RE = re.compile(r'^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$')
+
+
+# Kitchen / slug
+class KitchenOut(BaseModel):
+    kitchen_id: str
+    slug: str
+    model_config = {"from_attributes": True}
+
+class KitchenIn(BaseModel):
+    slug: str
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str) -> str:
+        if not SLUG_RE.match(v):
+            raise ValueError("Slug must be 2-64 characters, lowercase letters, numbers and hyphens only, and cannot start or end with a hyphen")
+        return v
+
+class SlugLookupOut(BaseModel):
+    kitchen_id: str
+    slug: str
 
 
 # Settings

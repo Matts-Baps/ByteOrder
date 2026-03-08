@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { menuApi, orderApi } from '../lib/api'
+import { useKitchen } from '../contexts/KitchenContext'
 
 const STEPS = { NAME: 'name', CATEGORY: 'category', ITEM: 'item', CUSTOMISE: 'customise', BASKET: 'basket', CONFIRM: 'confirm' }
 
 export default function Order() {
   const navigate = useNavigate()
+  const { slug } = useKitchen()
   const [step, setStep] = useState(STEPS.NAME)
   const [name, setName] = useState('')
   const [categories, setCategories] = useState([])
@@ -57,7 +59,7 @@ export default function Order() {
     setSubmitting(true)
     try {
       const { data } = await orderApi.post('/orders/', { customer_name: name, items: basket })
-      navigate(`/track/${data.id}`)
+      navigate(`/k/${slug}/track/${data.public_id}`)
     } catch (err) {
       alert('Failed to place order. Please try again.')
       setSubmitting(false)
