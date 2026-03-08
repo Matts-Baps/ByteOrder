@@ -24,9 +24,12 @@ services:
   menu-service:
     build:
       context: ../menu-service
-    image: ghcr.io/proffalken/byteorder/menu-service:latest
+    image: ghcr.io/matts-baps/byteorder/menu-service:latest
     environment:
       DATABASE_URL: postgresql://byteorder:${POSTGRES_PASSWORD:-byteorder}@postgres:5432/byteorder
+      AUTH_MODE: ${AUTH_MODE:-self-hosted}
+      DEFAULT_KITCHEN_ID: ${DEFAULT_KITCHEN_ID:-default}
+      DEFAULT_KITCHEN_SLUG: ${DEFAULT_KITCHEN_SLUG:-default}
       OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
     depends_on:
       postgres:
@@ -37,10 +40,12 @@ services:
   order-service:
     build:
       context: ../order-service
-    image: ghcr.io/proffalken/byteorder/order-service:latest
+    image: ghcr.io/matts-baps/byteorder/order-service:latest
     environment:
       DATABASE_URL: postgresql://byteorder:${POSTGRES_PASSWORD:-byteorder}@postgres:5432/byteorder
       REDIS_URL: redis://redis:6379
+      AUTH_MODE: ${AUTH_MODE:-self-hosted}
+      DEFAULT_KITCHEN_ID: ${DEFAULT_KITCHEN_ID:-default}
       OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
     depends_on:
       postgres:
@@ -53,10 +58,11 @@ services:
   print-service:
     build:
       context: ../print-service
-    image: ghcr.io/proffalken/byteorder/print-service:latest
+    image: ghcr.io/matts-baps/byteorder/print-service:latest
     environment:
       DATABASE_URL: postgresql://byteorder:${POSTGRES_PASSWORD:-byteorder}@postgres:5432/byteorder
       REDIS_URL: redis://redis:6379
+      AUTH_MODE: ${AUTH_MODE:-self-hosted}
       OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
     depends_on:
       postgres:
@@ -69,13 +75,20 @@ services:
   admin:
     build:
       context: ../admin
-    image: ghcr.io/proffalken/byteorder/admin:latest
+    image: ghcr.io/matts-baps/byteorder/admin:latest
     environment:
       DATABASE_URL: postgresql://byteorder:${POSTGRES_PASSWORD:-byteorder}@postgres:5432/byteorder
       MENU_SERVICE_URL: http://menu-service:8000
       ORDER_SERVICE_URL: http://order-service:8001
+      AUTH_MODE: ${AUTH_MODE:-self-hosted}
+      # Self-hosted auth (AUTH_MODE=self-hosted)
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-byteorder}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
-      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-byteorder}
+      DEFAULT_KITCHEN_ID: ${DEFAULT_KITCHEN_ID:-default}
+      # Cloud auth (AUTH_MODE=cloud)
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
       OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
     depends_on:
       - menu-service
@@ -86,7 +99,7 @@ services:
   frontend:
     build:
       context: ../frontend
-    image: ghcr.io/proffalken/byteorder/frontend:latest
+    image: ghcr.io/matts-baps/byteorder/frontend:latest
     depends_on:
       - menu-service
       - order-service

@@ -64,7 +64,7 @@ docker compose up -d
 
 | URL | What |
 |-----|------|
-| `http://localhost` | Customer ordering frontend |
+| `http://localhost:3000` | Customer ordering frontend |
 | `http://localhost:3001` | Kitchen admin panel |
 
 ### 4. First login
