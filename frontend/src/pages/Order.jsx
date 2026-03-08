@@ -59,7 +59,7 @@ export default function Order() {
     setSubmitting(true)
     try {
       const { data } = await orderApi.post('/orders/', { customer_name: name, items: basket })
-      navigate(`/k/${slug}/track/${data.public_id}`)
+      navigate(slug ? `/k/${slug}/track/${data.public_id}` : `/track/${data.public_id}`)
     } catch (err) {
       alert('Failed to place order. Please try again.')
       setSubmitting(false)

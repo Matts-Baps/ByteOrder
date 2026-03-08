@@ -76,7 +76,7 @@ export default function TrackOrder() {
   function handleLookup(e) {
     e.preventDefault()
     if (!lookupId.trim()) return
-    navigate(`/k/${slug}/track/${lookupId.trim()}`)
+    navigate(slug ? `/k/${slug}/track/${lookupId.trim()}` : `/track/${lookupId.trim()}`)
   }
 
   const currentStep = STATUS_STEPS.indexOf(status)
@@ -84,7 +84,7 @@ export default function TrackOrder() {
   return (
     <div className="min-h-screen bg-brand-bg">
       <header className="bg-brand-600 text-white px-4 py-4">
-        <Link to={`/k/${slug}/`} className="text-white text-xl">←</Link>
+        <Link to={slug ? `/k/${slug}/` : '/'} className="text-white text-xl">←</Link>
         <span className="text-xl font-bold ml-3">Track Order</span>
       </header>
 
@@ -111,7 +111,7 @@ export default function TrackOrder() {
             {error ? (
               <div>
                 <p className="text-red-500 mb-4">{error}</p>
-                <Link to={`/k/${slug}/track`} className="text-brand-600 underline">Try again</Link>
+                <Link to={slug ? `/k/${slug}/track` : '/track'} className="text-brand-600 underline">Try again</Link>
               </div>
             ) : (
               <p className="text-gray-400">Loading…</p>

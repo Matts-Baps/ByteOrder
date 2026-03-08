@@ -12,7 +12,8 @@ export default function Home() {
   const [brandColor, setBrandColor] = useState('#ea580c')
   const esRef = useRef(null)
 
-  const orderUrl = `${window.location.origin}/k/${slug}/order`
+  const basePath = slug ? `/k/${slug}` : ''
+  const orderUrl = `${window.location.origin}${basePath}/order`
 
   useEffect(() => {
     menuApi.get('/settings/kitchen_name').then(({ data }) => {
@@ -63,7 +64,7 @@ export default function Home() {
       <div className="bg-brand-surface rounded-2xl shadow-xl p-6 mb-10">
         <QRCodeSVG value={orderUrl} size={220} fgColor={brandColor} />
         <p className="text-center text-sm text-gray-400 mt-3">
-          or <Link to={`/k/${slug}/order`} className="text-brand-600 underline">tap here</Link> to order
+          or <Link to={`${basePath}/order`} className="text-brand-600 underline">tap here</Link> to order
         </p>
       </div>
 
@@ -90,13 +91,13 @@ export default function Home() {
 
       <div className="mt-8 flex gap-4">
         <Link
-          to={`/k/${slug}/order`}
+          to={`${basePath}/order`}
           className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-8 py-3 rounded-xl text-lg shadow transition-colors"
         >
           Place Order
         </Link>
         <Link
-          to={`/k/${slug}/track`}
+          to={`${basePath}/track`}
           className="bg-white hover:bg-gray-50 text-brand-600 font-bold px-8 py-3 rounded-xl text-lg shadow border border-brand-200 transition-colors"
         >
           Track Order
