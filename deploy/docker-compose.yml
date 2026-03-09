@@ -99,6 +99,8 @@ services:
   frontend:
     build:
       context: ../frontend
+      args:
+        VITE_OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
     image: ghcr.io/matts-baps/byteorder/frontend:latest
     depends_on:
       - menu-service

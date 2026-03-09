@@ -6,13 +6,32 @@ on:
     paths:
       - "order-service/**"
       - ".github/workflows/order-service-docker.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "order-service/**"
+      - ".github/workflows/order-service-docker.yml"
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/order-service
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+        working-directory: order-service
+      - run: python -m pytest tests/ -v
+        working-directory: order-service
+
   build-and-push:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read

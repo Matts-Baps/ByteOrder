@@ -6,13 +6,34 @@ on:
     paths:
       - "admin/**"
       - ".github/workflows/admin-docker.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "admin/**"
+      - ".github/workflows/admin-docker.yml"
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/admin
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci
+        working-directory: admin
+      - run: npm test
+        working-directory: admin
+
   build-and-push:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
