@@ -44,29 +44,54 @@ if _otel_exporter_endpoint or settings.otel_endpoint:
     SQLAlchemyInstrumentor().instrument(engine=engine)
 
 
-def _run_migrations():
-    """Idempotent schema migrations. Safe to run on every startup."""
-    with engine.connect() as conn:
-        # Add kitchen_id to tables that predate multi-tenancy
-        conn.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS kitchen_id VARCHAR NOT NULL DEFAULT ''"))
-        conn.execute(text("ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS kitchen_id VARCHAR NOT NULL DEFAULT ''"))
-        conn.execute(text("ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS kitchen_id VARCHAR NOT NULL DEFAULT ''"))
-        # Migrate settings from single-column PK (key) to composite PK (kitchen_id, key)
-        conn.execute(text("ALTER TABLE settings ADD COLUMN IF NOT EXISTS kitchen_id VARCHAR NOT NULL DEFAULT ''"))
-        conn.execute(text("""
-            DO $$ BEGIN
-                IF EXISTS (
-                    SELECT 1 FROM pg_constraint
-                    WHERE conrelid = 'settings'::regclass
-                    AND contype = 'p'
-                    AND array_length(conkey, 1) = 1
-                ) THEN
-                    ALTER TABLE settings DROP CONSTRAINT settings_pkey;
-                    ALTER TABLE settings ADD PRIMARY KEY (kitchen_id, key);
-                END IF;
-            END $$
-        """))
-        # kitchens table is created by Base.metadata.create_all, no ALTER needed
+def _run_migrations(engine=None):
+    """Idempotent schema migrations. Safe to run on every startup.
+
+    Uses SQLAlchemy inspect() for column detection so it works on both SQLite
+    (tests) and PostgreSQL (production).  The primary-key fix for the settings
+    table is PostgreSQL-only and is skipped on other dialects.
+    """
+    from sqlalchemy import inspect as sa_inspect
+
+    _engine = engine or globals()['engine']
+
+    with _engine.connect() as conn:
+        insp = sa_inspect(conn)
+        existing_tables = set(insp.get_table_names())
+
+        # Add kitchen_id to tables that predate multi-tenancy (orphan old rows with '').
+        for table_name in ('categories', 'menu_items', 'ingredients'):
+            if table_name in existing_tables:
+                cols = {c['name'] for c in insp.get_columns(table_name)}
+                if 'kitchen_id' not in cols:
+                    conn.execute(text(
+                        f"ALTER TABLE {table_name} ADD COLUMN kitchen_id VARCHAR NOT NULL DEFAULT ''"
+                    ))
+
+        # settings: add kitchen_id with DEFAULT 'default' so self-hosted installs
+        # retain their existing data under the default kitchen.
+        if 'settings' in existing_tables:
+            settings_cols = {c['name'] for c in insp.get_columns('settings')}
+            if 'kitchen_id' not in settings_cols:
+                conn.execute(text(
+                    "ALTER TABLE settings ADD COLUMN kitchen_id VARCHAR NOT NULL DEFAULT 'default'"
+                ))
+                # Fix primary key: drop single-column PK and replace with composite.
+                # This step is PostgreSQL-specific; SQLite doesn't support PK changes
+                # and create_all handles fresh SQLite DBs correctly already.
+                if _engine.dialect.name == 'postgresql':
+                    conn.execute(text("""
+                        DO $$ BEGIN
+                            IF EXISTS (
+                                SELECT 1 FROM pg_constraint
+                                WHERE conrelid = 'settings'::regclass AND contype = 'p'
+                            ) THEN
+                                ALTER TABLE settings DROP CONSTRAINT settings_pkey;
+                            END IF;
+                            ALTER TABLE settings ADD PRIMARY KEY (kitchen_id, key);
+                        END $$
+                    """))
+
         conn.commit()
 
 
