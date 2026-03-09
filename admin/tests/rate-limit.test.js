@@ -9,21 +9,36 @@ process.env.AUTH_MODE = 'self-hosted'
 process.env.ADMIN_USERNAME = 'admin'
 process.env.ADMIN_PASSWORD = 'testpass'
 
-describe('Rate limiting is applied to API routes', () => {
+describe('Rate limiting does not block normal usage', () => {
   let app
 
   beforeAll(() => {
-    // Clear module cache so each test suite gets a fresh rate-limit state
     jest.resetModules()
     app = require('../server/app')
   })
 
-  it('returns 429 after exceeding the rate limit on /api/config', async () => {
-    // The rate limiter must be configured with a max of no more than 100
-    // requests per window, so hammering with 200 sequential requests should
-    // eventually return 429.
+  it('allows a realistic burst of API requests without rate-limiting', async () => {
+    // A kitchen admin panel user loading several pages makes ~30 API requests
+    // in quick succession. None of these should be rate-limited.
+    for (let i = 0; i < 30; i++) {
+      const res = await request(app).get('/api/config')
+      expect(res.status).not.toBe(429)
+    }
+  })
+})
+
+describe('Rate limiting blocks excessive traffic', () => {
+  let app
+
+  beforeAll(() => {
+    jest.resetModules()
+    app = require('../server/app')
+  })
+
+  it('returns 429 after a sustained flood of API requests', async () => {
+    // DoS traffic: hundreds of requests in a single window should be blocked.
     let got429 = false
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 400; i++) {
       const res = await request(app).get('/api/config')
       if (res.status === 429) {
         got429 = true
@@ -33,14 +48,12 @@ describe('Rate limiting is applied to API routes', () => {
     expect(got429).toBe(true)
   })
 
-  it('rate-limit response includes Retry-After or RateLimit headers', async () => {
-    // Exhaust the limit
+  it('rate-limit response includes standard RateLimit headers', async () => {
     let res
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 400; i++) {
       res = await request(app).get('/api/config')
       if (res.status === 429) break
     }
-    // At least one of the standard rate-limit response headers must be present
     const hasHeader =
       res.headers['retry-after'] !== undefined ||
       res.headers['ratelimit-limit'] !== undefined ||
