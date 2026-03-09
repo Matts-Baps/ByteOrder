@@ -4,6 +4,8 @@ COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     npm ci --ignore-scripts
 COPY . .
+ARG VITE_OTEL_ENDPOINT=""
+ENV VITE_OTEL_ENDPOINT=$VITE_OTEL_ENDPOINT
 RUN ARCH=$(node -p process.arch) && \
     mkdir -p node_modules/esbuild/bin && \
     cp node_modules/@esbuild/linux-${ARCH}/bin/esbuild node_modules/esbuild/bin/esbuild && \

@@ -16,25 +16,58 @@ log = logging.getLogger("print-service")
 # OpenTelemetry setup
 _otel_exporter_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
 if _otel_exporter_endpoint or settings.otel_endpoint:
-    from opentelemetry import trace
+    from opentelemetry import trace, metrics
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
     from opentelemetry.sdk.resources import Resource
+    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+    from opentelemetry.instrumentation.redis import RedisInstrumentor
+    from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
     resource = Resource.create({"service.name": settings.otel_service_name})
-    provider = TracerProvider(resource=resource)
+
     if _otel_exporter_endpoint:
-        exporter = OTLPSpanExporter()
+        trace_exporter = OTLPSpanExporter()
+        metric_exporter = OTLPMetricExporter()
     else:
-        exporter = OTLPSpanExporter(endpoint=f"{settings.otel_endpoint}/v1/traces")
-    provider.add_span_processor(BatchSpanProcessor(exporter))
+        trace_exporter = OTLPSpanExporter(endpoint=f"{settings.otel_endpoint}/v1/traces")
+        metric_exporter = OTLPMetricExporter(endpoint=f"{settings.otel_endpoint}/v1/metrics")
+
+    provider = TracerProvider(resource=resource)
+    provider.add_span_processor(BatchSpanProcessor(trace_exporter))
     trace.set_tracer_provider(provider)
+
+    meter_provider = MeterProvider(
+        resource=resource,
+        metric_readers=[PeriodicExportingMetricReader(metric_exporter)],
+    )
+    metrics.set_meter_provider(meter_provider)
+
     tracer = trace.get_tracer(__name__)
+    _meter = metrics.get_meter(__name__)
+    _orders_processed = _meter.create_counter(
+        "print_service.orders_processed",
+        description="Number of orders processed by the print service",
+    )
+    _print_errors = _meter.create_counter(
+        "print_service.print_errors",
+        description="Number of failed print attempts",
+    )
 else:
     tracer = None
+    _orders_processed = None
+    _print_errors = None
 
 engine = create_engine(settings.database_url)
+
+if _otel_exporter_endpoint or settings.otel_endpoint:
+    SQLAlchemyInstrumentor().instrument(engine=engine)
+    RedisInstrumentor().instrument()
+    RequestsInstrumentor().instrument()
 
 _BLOCKED_PRINTER_HOSTS = {
     "localhost", "postgres", "redis", "menu-service", "order-service",
@@ -151,8 +184,14 @@ def process_order(message_data: bytes):
         with tracer.start_as_current_span("print_order") as span:
             span.set_attribute("order.number", order.get("order_number", ""))
             span.set_attribute("order.customer", order.get("customer_name", ""))
+            span.set_attribute("order.kitchen_id", kitchen_id)
+            span.set_attribute("printer.url", printer_url)
             success = send_to_printer(payload, printer_url)
             span.set_attribute("print.success", success)
+            if _orders_processed:
+                _orders_processed.add(1, {"kitchen_id": kitchen_id, "success": str(success)})
+            if not success and _print_errors:
+                _print_errors.add(1, {"kitchen_id": kitchen_id})
     else:
         send_to_printer(payload, printer_url)
 
