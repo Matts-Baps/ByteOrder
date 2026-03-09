@@ -1,29 +1,16 @@
 [Unit]
 Description=ByteOrder Print Service
-Documentation=https://github.com/matts-baps/byteorder
-After=network-online.target docker.service
+After=network-online.target
 Wants=network-online.target
-Requires=docker.service
 
 [Service]
 Type=simple
+User=byteorder
+WorkingDirectory=/opt/byteorder-print
 EnvironmentFile=/etc/byteorder/print-service.env
-ExecStartPre=-/usr/bin/docker stop byteorder-print
-ExecStartPre=-/usr/bin/docker rm byteorder-print
-ExecStartPre=/usr/bin/docker pull ghcr.io/matts-baps/byteorder/print-service:latest
-ExecStart=/usr/bin/docker run \
-    --name byteorder-print \
-    --rm \
-    --env-file /etc/byteorder/print-service.env \
-    ghcr.io/matts-baps/byteorder/print-service:latest
-ExecStop=/usr/bin/docker stop byteorder-print
-
+ExecStart=/opt/byteorder-print/venv/bin/python -m app.main
 Restart=on-failure
 RestartSec=10
-TimeoutStartSec=120
-
-# Harden the service: don't allow the process to gain new privileges or
-# modify the host filesystem directly (the container provides its own sandbox).
 NoNewPrivileges=true
 
 [Install]

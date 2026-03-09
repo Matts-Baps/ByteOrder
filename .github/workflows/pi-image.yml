@@ -3,10 +3,6 @@ name: Build Raspberry Pi OS Image
 on:
   push:
     branches: [main]
-    # Only build on branch pushes when relevant files change.  Tag pushes
-    # always build (GitHub applies path filters to tag pushes as well, so we
-    # list the tags separately using a second trigger via workflow_dispatch for
-    # release builds — see the note in the Release job step).
     paths:
       - "print-service/**"
       - "pi-image/**"
@@ -20,15 +16,14 @@ on:
         required: false
         default: ""
 
-# If a newer push arrives while the workflow is running, cancel the in-progress
-# run to avoid queuing multiple hour-long builds.
+# Cancel in-progress runs on new pushes to avoid queuing multiple long builds.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-pi-image:
-    name: Build Raspberry Pi OS Lite image
+    name: Build Raspberry Pi OS Lite image (armhf / Pi Zero W)
     runs-on: ubuntu-latest
     permissions:
       contents: write   # needed to create GitHub Releases and upload assets
@@ -46,7 +41,7 @@ jobs:
             zip dosfstools libcap2-bin rsync xz-utils file git curl \
             binfmt-support bc kmod xxd gpg pigz
 
-      # ── Clone pi-gen ───────────────────────────────────────────────────────
+      # ── Clone pi-gen (main branch = 32-bit armhf, Pi Zero W compatible) ──
       - name: Clone pi-gen
         run: |
           git clone --depth 1 https://github.com/RPi-Distro/pi-gen.git /tmp/pi-gen
@@ -74,10 +69,9 @@ jobs:
           ENABLE_SSH=1
 
           # Build Lite only (stages 0-2) plus our custom ByteOrder stage.
-          # Stages 3-5 (Desktop) are skipped via SKIP files created below.
           STAGE_LIST="stage0 stage1 stage2 stage-byteorder"
 
-          # Output a single .img.xz; skip NOOBS packaging.
+          # Output a single compressed image; skip NOOBS packaging.
           EXPORT_NOOBS=0
           EXPORT_LAST_IMAGE_ONLY=1
           COMPRESS=1
@@ -98,70 +92,66 @@ jobs:
                 /tmp/pi-gen/stage2/SKIP_IMAGES
 
           # Create the custom stage directory layout expected by pi-gen
-          mkdir -p /tmp/pi-gen/stage-byteorder/00-install-byteorder/files
+          STEP=/tmp/pi-gen/stage-byteorder/00-install-byteorder
+          mkdir -p "${STEP}/files"
 
-          # Copy supporting files from this repo into the stage's files/ dir;
-          # 00-run.sh will install them into the image's rootfs.
+          # Copy the print-service source into the stage files directory.
+          # The chroot script will install it into /opt/byteorder-print/.
+          cp -r print-service/app "${STEP}/files/app"
+
+          # Copy the Pi-specific requirements (no psycopg2-binary, no OTel).
+          cp pi-image/requirements-pi.txt "${STEP}/files/requirements-pi.txt"
+
+          # Copy the systemd service unit.
           cp pi-image/files/byteorder-print.service \
-            /tmp/pi-gen/stage-byteorder/00-install-byteorder/files/
-          cp pi-image/files/byteorder-firstboot.sh \
-            /tmp/pi-gen/stage-byteorder/00-install-byteorder/files/
+             "${STEP}/files/byteorder-print.service"
 
-          # Write the chroot install script (runs inside the arm64 chroot)
-          cat > /tmp/pi-gen/stage-byteorder/00-install-byteorder/00-run.sh <<'RUNEOF'
+          # Write the chroot install script.
+          # Runs inside the armhf QEMU chroot on the image's rootfs.
+          cat > "${STEP}/00-run.sh" <<'RUNEOF'
           #!/bin/bash -e
-          # Executed by pi-gen inside the arm64 Bookworm chroot.
+          # Runs inside the armhf Bookworm chroot (via pi-gen + QEMU).
+          # This script is executed from the step directory, so files/ is relative.
 
-          # ── Install Docker CE ──────────────────────────────────────────────
-          install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/debian/gpg \
-            | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-          chmod a+r /etc/apt/keyrings/docker.gpg
-
-          ARCH="$(dpkg --print-architecture)"
-          echo \
-            "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] \
-            https://download.docker.com/linux/debian bookworm stable" \
-            > /etc/apt/sources.list.d/docker.list
-
-          apt-get update -qq
+          # ── Install system Python and psycopg2 from apt ───────────────────
+          # python3-psycopg2 ships a compiled arm binary — avoids a slow
+          # source build of psycopg2 inside QEMU emulation.
           apt-get install -y --no-install-recommends \
-            docker-ce docker-ce-cli containerd.io docker-compose-plugin ca-certificates
+            python3-venv python3-pip python3-psycopg2 libpq5
 
-          systemctl enable docker
+          # ── Set up the application directory ──────────────────────────────
+          install -d /opt/byteorder-print
+          cp -r files/app /opt/byteorder-print/app
 
-          # Allow the byteorder user to manage Docker without sudo
-          usermod -aG docker byteorder
+          # ── Create a virtualenv that can see the system psycopg2 ──────────
+          python3 -m venv --system-site-packages /opt/byteorder-print/venv
 
-          # ── Install ByteOrder files ────────────────────────────────────────
-          install -m 0644 "${ROOTFS_DIR}/files/byteorder-print.service" \
-            /etc/systemd/system/byteorder-print.service
+          # ── Install pure-Python dependencies ──────────────────────────────
+          # psycopg2 is satisfied by the system package above.
+          /opt/byteorder-print/venv/bin/pip install --no-cache-dir \
+            -r files/requirements-pi.txt
 
-          install -m 0755 "${ROOTFS_DIR}/files/byteorder-firstboot.sh" \
-            /usr/local/sbin/byteorder-firstboot.sh
+          # ── Install env-file directory ────────────────────────────────────
+          install -d -m 750 /etc/byteorder
 
-          systemctl enable byteorder-print.service
-
-          # ── Create env-file directory ──────────────────────────────────────
-          mkdir -p /etc/byteorder
-          chmod 750 /etc/byteorder
-          chown root:byteorder /etc/byteorder
-
-          # Placeholder env file — operators fill in real values before/after boot
           cat > /etc/byteorder/print-service.env <<'ENVEOF'
-          # ByteOrder print-service environment
-          # Edit these values to match your installation before (or after) first boot,
-          # then run: systemctl restart byteorder-print
-          REDIS_URL=redis://redis:6379
-          DATABASE_URL=postgresql://byteorder:byteorder@postgres:5432/byteorder
+          # ByteOrder print-service environment — edit before first boot.
+          # After editing, run: sudo systemctl restart byteorder-print
+          REDIS_URL=redis://192.168.1.x:6379
+          DATABASE_URL=postgresql://byteorder:byteorder@192.168.1.x:5432/byteorder
           # OTEL_ENDPOINT=
           ENVEOF
 
           chmod 640 /etc/byteorder/print-service.env
-          chown root:byteorder /etc/byteorder/print-service.env
+
+          # ── Install and enable the systemd service ────────────────────────
+          install -m 0644 files/byteorder-print.service \
+            /etc/systemd/system/byteorder-print.service
+
+          systemctl enable byteorder-print.service
           RUNEOF
 
-          chmod +x /tmp/pi-gen/stage-byteorder/00-install-byteorder/00-run.sh
+          chmod +x "${STEP}/00-run.sh"
 
       # ── Run pi-gen ─────────────────────────────────────────────────────────
       - name: Build image with pi-gen
@@ -182,7 +172,6 @@ jobs:
           fi
           echo "Found image: $IMG"
 
-          # Determine the version label
           if [ -n "${{ github.event.inputs.release_tag }}" ]; then
             VERSION="${{ github.event.inputs.release_tag }}"
           else
@@ -190,8 +179,8 @@ jobs:
           fi
           DEST="byteorder-pi-${VERSION}.img.xz"
           cp "$IMG" "$DEST"
-          echo "path=$DEST"     >> "$GITHUB_OUTPUT"
-          echo "name=$DEST"     >> "$GITHUB_OUTPUT"
+          echo "path=$DEST"       >> "$GITHUB_OUTPUT"
+          echo "name=$DEST"       >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       # ── Upload as workflow artifact (every run) ────────────────────────────
@@ -212,9 +201,11 @@ jobs:
           body: |
             ## ByteOrder Raspberry Pi OS Image — ${{ steps.image.outputs.version }}
 
-            Pre-built Raspberry Pi OS Lite (Bookworm, 64-bit) image with the
-            ByteOrder print service pre-installed and configured to start
-            automatically on boot.
+            Pre-built Raspberry Pi OS Lite (Bookworm, **32-bit armhf**) image
+            with the ByteOrder print service pre-installed and running natively
+            via systemd (no Docker required).
+
+            Compatible with: Pi Zero W, Pi Zero 2 W, Pi 1, Pi 2, Pi 3, Pi 4.
 
             ### Flashing
 
@@ -222,8 +213,8 @@ jobs:
 
             1. Open Raspberry Pi Imager.
             2. Choose **Use custom** and select `${{ steps.image.outputs.name }}`.
-            3. Click the **customisation** gear icon to set your hostname, SSH
-               authorised key, and Wi-Fi credentials before writing.
+            3. Click the ⚙️ settings icon to set your hostname, SSH authorised
+               key, and Wi-Fi credentials before writing.
 
             ### First-boot configuration
 
@@ -231,12 +222,11 @@ jobs:
             card before first boot) and set the correct values for your
             installation:
 
-            ```
+            ```env
             REDIS_URL=redis://<host>:6379
             DATABASE_URL=postgresql://byteorder:<pass>@<host>:5432/byteorder
             ```
 
-            Then reboot — or run `sudo systemctl start byteorder-print`. The
-            service will pull the container image from GHCR on first run.
+            Then reboot — or run `sudo systemctl start byteorder-print`.
           files: ${{ steps.image.outputs.path }}
           fail_on_unmatched_files: true
