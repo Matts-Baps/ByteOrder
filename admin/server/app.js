@@ -4,6 +4,7 @@
 const express = require('express')
 const cors = require('cors')
 const path = require('path')
+const rateLimit = require('express-rate-limit')
 const menuProxy = require('./routes/menu')
 const orderProxy = require('./routes/orders')
 const settingsProxy = require('./routes/settings')
@@ -27,8 +28,18 @@ if (AUTH_MODE === 'cloud') {
 
 const app = express()
 
+// Rate-limit all API requests to mitigate denial-of-service attacks.
+// 100 requests per 15 minutes per IP is generous for a kitchen admin panel.
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: true,  // Return RateLimit-* headers (RFC 6585 draft)
+  legacyHeaders: false,
+})
+
 app.use(cors())
 app.use(express.json())
+app.use(apiLimiter)
 
 if (AUTH_MODE === 'cloud') {
   const { clerkMiddleware } = require('@clerk/express')
