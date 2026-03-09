@@ -15,6 +15,10 @@ spec:
       containers:
         - name: redis
           image: redis:7-alpine
+          {{- with $.Values.resources.redis }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           readinessProbe:
             exec:
               command: ["redis-cli", "ping"]

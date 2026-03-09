@@ -45,6 +45,10 @@ spec:
                 secretKeyRef:
                   name: byteorder-postgres
                   key: password
+          {{- with $.Values.resources.postgres }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
