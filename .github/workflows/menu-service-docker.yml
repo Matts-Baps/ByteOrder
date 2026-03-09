@@ -79,7 +79,9 @@ jobs:
         run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
       - name: Scan image with Trivy
-        run: trivy image --format sarif --output trivy-image.sarif --severity CRITICAL,HIGH --exit-code 0 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        run: |
+          IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" | tr '[:upper:]' '[:lower:]')
+          trivy image --format sarif --output trivy-image.sarif --severity CRITICAL,HIGH --exit-code 0 "$IMAGE"
 
       - name: Upload image scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
