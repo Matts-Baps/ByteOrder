@@ -37,9 +37,9 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            coreutils quilt parted qemu-user-static debootstrap zerofree \
+            coreutils quilt parted qemu-user-static qemu-user-binfmt debootstrap zerofree \
             zip dosfstools libcap2-bin rsync xz-utils file git curl \
-            binfmt-support bc kmod xxd gpg pigz
+            binfmt-support libarchive-tools arch-test bc kmod xxd gpg pigz
 
       # ── Clone pi-gen (main branch = 32-bit armhf, Pi Zero W compatible) ──
       - name: Clone pi-gen
@@ -123,12 +123,15 @@ jobs:
           install -d /opt/byteorder-print
           cp -r files/app /opt/byteorder-print/app
 
+          # ── Install uv for fast, reliable dependency installation ─────────
+          pip3 install --no-cache-dir uv
+
           # ── Create a virtualenv that can see the system psycopg2 ──────────
-          python3 -m venv --system-site-packages /opt/byteorder-print/venv
+          uv venv --system-site-packages /opt/byteorder-print/venv
 
           # ── Install pure-Python dependencies ──────────────────────────────
           # psycopg2 is satisfied by the system package above.
-          /opt/byteorder-print/venv/bin/pip install --no-cache-dir \
+          /opt/byteorder-print/venv/bin/uv pip install --no-cache-dir \
             -r files/requirements-pi.txt
 
           # ── Install env-file directory ────────────────────────────────────
