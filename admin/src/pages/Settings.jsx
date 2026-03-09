@@ -16,6 +16,7 @@ export default function Settings() {
   const [brandText, setBrandText] = useState('#111827')
   const [slug, setSlug] = useState('')
   const [slugBanner, setSlugBanner] = useState(false)
+  const [nameBanner, setNameBanner] = useState(false)
   const [saved, setSaved] = useState('')
   const [error, setError] = useState('')
   const fileInputRef = useRef(null)
@@ -24,7 +25,12 @@ export default function Settings() {
     api.get('/settings/').then(({ data }) => {
       const map = Object.fromEntries(data.map(s => [s.key, s.value || '']))
       setPrinterUrl(map.printer_url || '')
-      setKitchenName(map.kitchen_name || '')
+      if (map.kitchen_name) {
+        setKitchenName(map.kitchen_name)
+      } else if (organization?.name) {
+        setKitchenName(organization.name)
+        setNameBanner(true)
+      }
       setLogo(map.logo || '')
       const colour = map.brand_primary || '#ea580c'
       setBrandPrimary(colour)
@@ -127,6 +133,12 @@ export default function Settings() {
           <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded-lg px-4 py-3">
             Customer URL pre-filled from your Clerk organization. Review and save to confirm.
             <button type="button" onClick={() => setSlugBanner(false)} className="ml-2 underline text-blue-600 text-xs">Dismiss</button>
+          </div>
+        )}
+        {nameBanner && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded-lg px-4 py-3">
+            Kitchen name pre-filled from your Clerk organization. Review and save to confirm.
+            <button type="button" onClick={() => setNameBanner(false)} className="ml-2 underline text-blue-600 text-xs">Dismiss</button>
           </div>
         )}
 
