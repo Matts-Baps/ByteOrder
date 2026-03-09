@@ -58,10 +58,12 @@ jobs:
           KEYBOARD_LAYOUT="English (UK)"
           TIMEZONE_DEFAULT="Europe/London"
 
-          # First user — password auth is disabled; credentials are injected at
-          # flash time via Pi Imager customisation (userconf.txt / firstrun.sh).
+          # A password must be set or newer pi-gen refuses to build.
+          # Pi Imager overwrites this at flash time via its customisation dialog,
+          # so the value here is only a fallback for direct SD-card writes.
+          # Override by setting a PI_DEFAULT_PASSWORD repository secret.
           FIRST_USER_NAME="byteorder"
-          FIRST_USER_PASS=""
+          FIRST_USER_PASS="${{ secrets.PI_DEFAULT_PASSWORD || 'ByteOrder-changeme' }}"
           DISABLE_FIRST_BOOT_USER_RENAME=1
 
           # Enable SSH so the device is reachable out of the box.
