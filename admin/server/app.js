@@ -28,18 +28,21 @@ if (AUTH_MODE === 'cloud') {
 
 const app = express()
 
-// Rate-limit all API requests to mitigate denial-of-service attacks.
-// 100 requests per 15 minutes per IP is generous for a kitchen admin panel.
+// Rate-limit API requests to mitigate denial-of-service attacks.
+// 300 requests per minute per IP: allows normal burst navigation (a page load
+// makes ~5 calls; a power user doing rapid interactions stays well under 5/sec)
+// while blocking automated floods. Applied only to /api/ so static asset
+// fetches don't count against the quota.
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  windowMs: 60 * 1000, // 1 minute
+  max: 300,
   standardHeaders: true,  // Return RateLimit-* headers (RFC 6585 draft)
   legacyHeaders: false,
 })
 
 app.use(cors())
 app.use(express.json())
-app.use(apiLimiter)
+app.use('/api/', apiLimiter)
 
 if (AUTH_MODE === 'cloud') {
   const { clerkMiddleware } = require('@clerk/express')
