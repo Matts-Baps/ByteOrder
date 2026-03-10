@@ -55,7 +55,7 @@ jobs:
           dd if=/dev/zero bs=1M count=1536 >> raspios.img
           sudo parted raspios.img --script resizepart 2 100%
           LOOP=$(sudo losetup --find --show --partscan raspios.img)
-          sudo e2fsck -f "${LOOP}p2"
+          sudo e2fsck -f -y "${LOOP}p2"
           sudo resize2fs "${LOOP}p2"
           sudo losetup --detach "${LOOP}"
 
