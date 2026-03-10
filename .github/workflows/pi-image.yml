@@ -120,57 +120,60 @@ jobs:
           cp pi-image/files/byteorder-print.service \
              "${STEP}/files/byteorder-print.service"
 
-          # Write the chroot install script.
-          # Runs inside the aarch64 QEMU chroot on the image's rootfs.
+          # 00-run.sh runs on the HOST (Ubuntu runner) — use it to copy files
+          # from the stage into ${ROOTFS_DIR} (the Pi image rootfs).
           cat > "${STEP}/00-run.sh" <<'RUNEOF'
-          #!/bin/bash -e
-          # Runs inside the aarch64 Bookworm chroot (via pi-gen + QEMU).
-          # This script is executed from the step directory, so files/ is relative.
+#!/bin/bash -e
+# Runs on the CI host. Copies app files into the Pi image rootfs so that
+# 00-run-chroot.sh (which runs inside the QEMU chroot) can find them.
 
-          # ── Install system Python and psycopg2 from apt ───────────────────
-          # python3-psycopg2 ships a compiled aarch64 binary — avoids building
-          # a C extension inside QEMU emulation.
-          apt-get install -y --no-install-recommends \
-            python3-venv python3-pip python3-psycopg2 libpq5
+install -d "${ROOTFS_DIR}/opt/byteorder-print"
+cp -r files/app "${ROOTFS_DIR}/opt/byteorder-print/app"
+cp files/requirements-pi.txt "${ROOTFS_DIR}/opt/byteorder-print/requirements-pi.txt"
 
-          # ── Set up the application directory ──────────────────────────────
-          install -d /opt/byteorder-print
-          cp -r files/app /opt/byteorder-print/app
+install -d -m 750 "${ROOTFS_DIR}/etc/byteorder"
+cat > "${ROOTFS_DIR}/etc/byteorder/print-service.env" <<'ENVEOF'
+# ByteOrder print-service environment — edit before first boot.
+# After editing, run: sudo systemctl restart byteorder-print
+REDIS_URL=redis://192.168.1.x:6379
+DATABASE_URL=postgresql://byteorder:byteorder@192.168.1.x:5432/byteorder
+# Uncomment and set to enable OpenTelemetry tracing/metrics:
+# OTEL_ENDPOINT=http://<byteorder-host>:4318
+ENVEOF
+chmod 640 "${ROOTFS_DIR}/etc/byteorder/print-service.env"
 
-          # ── Install uv for fast, reliable dependency installation ─────────
-          pip3 install --no-cache-dir uv
-
-          # ── Create a virtualenv that can see the system psycopg2 ──────────
-          uv venv --system-site-packages /opt/byteorder-print/venv
-
-          # ── Install dependencies including OpenTelemetry ──────────────────
-          # All packages including grpcio have aarch64 wheels on PyPI.
-          # psycopg2 is satisfied by the system package above.
-          /opt/byteorder-print/venv/bin/uv pip install --no-cache-dir \
-            -r files/requirements-pi.txt
-
-          # ── Install env-file directory ────────────────────────────────────
-          install -d -m 750 /etc/byteorder
-
-          cat > /etc/byteorder/print-service.env <<'ENVEOF'
-          # ByteOrder print-service environment — edit before first boot.
-          # After editing, run: sudo systemctl restart byteorder-print
-          REDIS_URL=redis://192.168.1.x:6379
-          DATABASE_URL=postgresql://byteorder:byteorder@192.168.1.x:5432/byteorder
-          # Uncomment and set to enable OpenTelemetry tracing/metrics:
-          # OTEL_ENDPOINT=http://<byteorder-host>:4318
-          ENVEOF
-
-          chmod 640 /etc/byteorder/print-service.env
-
-          # ── Install and enable the systemd service ────────────────────────
-          install -m 0644 files/byteorder-print.service \
-            /etc/systemd/system/byteorder-print.service
-
-          systemctl enable byteorder-print.service
-          RUNEOF
-
+install -m 0644 files/byteorder-print.service \
+  "${ROOTFS_DIR}/etc/systemd/system/byteorder-print.service"
+RUNEOF
           chmod +x "${STEP}/00-run.sh"
+
+          # 00-run-chroot.sh runs INSIDE the aarch64 QEMU chroot.
+          # apt-get, pip, uv, and systemctl all operate on the Pi image here.
+          cat > "${STEP}/00-run-chroot.sh" <<'RUNEOF'
+#!/bin/bash -e
+# Runs inside the aarch64 Bookworm chroot (via pi-gen + QEMU).
+
+# ── Install system Python and psycopg2 from apt ───────────────────────
+# python3-psycopg2 ships a compiled aarch64 binary — avoids building
+# a C extension inside QEMU emulation.
+apt-get install -y --no-install-recommends \
+  python3-venv python3-pip python3-psycopg2 libpq5
+
+# ── Install uv for fast, reliable dependency installation ─────────────
+pip3 install --no-cache-dir uv
+
+# ── Create a virtualenv that can see the system psycopg2 ──────────────
+uv venv --system-site-packages /opt/byteorder-print/venv
+
+# ── Install dependencies including OpenTelemetry ──────────────────────
+# All packages including grpcio have aarch64 wheels on PyPI.
+# psycopg2 is satisfied by the system package above.
+/opt/byteorder-print/venv/bin/uv pip install --no-cache-dir \
+  -r /opt/byteorder-print/requirements-pi.txt
+
+# ── Enable the systemd service ────────────────────────────────────────
+systemctl enable byteorder-print.service
+RUNEOF
 
           # arm64 pi-gen requires an EXPORT_IMAGE file in the stage directory
           # to trigger image export (absence of SKIP_IMAGES is not sufficient).
