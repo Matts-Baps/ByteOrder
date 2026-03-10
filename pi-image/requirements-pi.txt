@@ -2,12 +2,21 @@
 #
 # Differences from print-service/requirements.txt:
 #   - psycopg2-binary omitted: installed from apt (python3-psycopg2) to avoid
-#     compiling a C extension inside the ARMv6 QEMU chroot.
-#   - OpenTelemetry omitted: optional at runtime (only activates when
-#     OTEL_ENDPOINT env var is set) and grpcio has no ARMv6 wheel.
+#     compiling a C extension inside the aarch64 QEMU chroot.
 #   - pytest omitted: not needed on the device.
+#
+# Target: arm64 (Pi Zero 2 W, Pi 3, Pi 4 and later).
+# grpcio ships aarch64 wheels so full OpenTelemetry support is available.
 
 redis==5.1.0
 requests==2.32.4
 sqlalchemy==2.0.35
 pydantic-settings==2.5.2
+
+# OpenTelemetry (aligned with other services)
+opentelemetry-api==1.39.1
+opentelemetry-sdk==1.39.1
+opentelemetry-exporter-otlp==1.39.1
+opentelemetry-instrumentation-sqlalchemy==0.60b1
+opentelemetry-instrumentation-redis==0.60b1
+opentelemetry-instrumentation-requests==0.60b1
