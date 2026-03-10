@@ -48,8 +48,8 @@ jobs:
             -O raspios.img.xz
           xz --decompress raspios.img.xz
 
-      # The official image ships with a root partition sized to just fit the OS.
-      # Expand by 1.5 GB to accommodate Python packages + OpenTelemetry deps.
+      # The official image ships with a root partition sized to just fit the
+      # OS. Expand by 1.5 GB to accommodate Python packages + OpenTelemetry.
       - name: Expand root partition
         run: |
           dd if=/dev/zero bs=1M count=1536 >> raspios.img
@@ -74,57 +74,37 @@ jobs:
 
       - name: Inject ByteOrder print service
         run: |
-          # ── Copy app files into the image ──────────────────────────────────
           sudo mkdir -p /mnt/pi/opt/byteorder-print
           sudo cp -r print-service/app /mnt/pi/opt/byteorder-print/app
           sudo cp pi-image/requirements-pi.txt \
             /mnt/pi/opt/byteorder-print/requirements-pi.txt
 
-          # ── Systemd service unit ────────────────────────────────────────────
           sudo cp pi-image/files/byteorder-print.service \
             /mnt/pi/etc/systemd/system/byteorder-print.service
 
-          # ── Environment file template ───────────────────────────────────────
           sudo mkdir -p /mnt/pi/etc/byteorder
-          sudo tee /mnt/pi/etc/byteorder/print-service.env > /dev/null <<'EOF'
-# ByteOrder print-service environment — edit before first boot.
-# After editing, run: sudo systemctl restart byteorder-print
-REDIS_URL=redis://192.168.1.x:6379
-DATABASE_URL=postgresql://byteorder:byteorder@192.168.1.x:5432/byteorder
-# Uncomment and set to enable OpenTelemetry tracing/metrics:
-# OTEL_ENDPOINT=http://<byteorder-host>:4318
-EOF
+          sudo cp pi-image/files/print-service.env.template \
+            /mnt/pi/etc/byteorder/print-service.env
           sudo chmod 750 /mnt/pi/etc/byteorder
           sudo chmod 640 /mnt/pi/etc/byteorder/print-service.env
 
-          # ── Install packages inside the aarch64 chroot ─────────────────────
-          # qemu-aarch64-static is already registered via binfmt_misc by the
-          # qemu-user-static apt package; copy the binary into the chroot so
-          # the kernel can find it when executing aarch64 ELFs.
+          # Copy install script and QEMU binary into the image, run chroot.
+          sudo cp pi-image/scripts/install-chroot.sh /mnt/pi/tmp/install-chroot.sh
           sudo cp /usr/bin/qemu-aarch64-static /mnt/pi/usr/bin/
-
-          sudo chroot /mnt/pi /bin/bash -e <<'CHROOT'
-apt-get install -y --no-install-recommends \
-  python3-venv python3-pip python3-psycopg2 libpq5
-pip3 install --no-cache-dir uv
-uv venv --system-site-packages /opt/byteorder-print/venv
-/opt/byteorder-print/venv/bin/uv pip install --no-cache-dir \
-  -r /opt/byteorder-print/requirements-pi.txt
-systemctl enable byteorder-print.service
-CHROOT
-
+          sudo chroot /mnt/pi /bin/bash /tmp/install-chroot.sh
+          sudo rm /mnt/pi/tmp/install-chroot.sh
           sudo rm /mnt/pi/usr/bin/qemu-aarch64-static
 
       - name: Unmount image
         if: always()
         run: |
-          sudo umount /mnt/pi/sys     || true
-          sudo umount /mnt/pi/proc    || true
-          sudo umount /mnt/pi/dev/pts || true
-          sudo umount /mnt/pi/dev     || true
+          sudo umount /mnt/pi/sys          || true
+          sudo umount /mnt/pi/proc         || true
+          sudo umount /mnt/pi/dev/pts      || true
+          sudo umount /mnt/pi/dev          || true
           sudo umount /mnt/pi/boot/firmware || true
-          sudo umount /mnt/pi         || true
-          sudo losetup --detach "${LOOP}" || true
+          sudo umount /mnt/pi              || true
+          sudo losetup --detach "${LOOP}"  || true
 
       - name: Repack image
         id: image
@@ -136,8 +116,8 @@ CHROOT
           fi
           DEST="byteorder-pi-${VERSION}.img.xz"
           xz --compress --threads 0 --stdout raspios.img > "${DEST}"
-          echo "path=${DEST}"    >> "$GITHUB_OUTPUT"
-          echo "name=${DEST}"    >> "$GITHUB_OUTPUT"
+          echo "path=${DEST}"       >> "$GITHUB_OUTPUT"
+          echo "name=${DEST}"       >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Upload image artifact
@@ -165,13 +145,13 @@ CHROOT
 
             Flash with [Raspberry Pi Imager](https://www.raspberrypi.com/software/):
             1. Choose **Use custom** and select `${{ steps.image.outputs.name }}`.
-            2. Click the ⚙️ settings icon to set hostname, SSH key, and Wi-Fi before writing.
+            2. Click the settings icon to set hostname, SSH key, and Wi-Fi before writing.
 
             ### First-boot configuration
 
             Edit `/etc/byteorder/print-service.env` and set:
 
-            ```env
+            ```
             REDIS_URL=redis://<host>:6379
             DATABASE_URL=postgresql://byteorder:<pass>@<host>:5432/byteorder
             # OTEL_ENDPOINT=http://<byteorder-host>:4318
