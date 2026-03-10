@@ -83,10 +83,11 @@ jobs:
           # Build Lite only (stages 0-2) plus our custom ByteOrder stage.
           STAGE_LIST="stage0 stage1 stage2 stage-byteorder"
 
-          # Output a single compressed image; skip NOOBS packaging.
+          # Output a single xz-compressed image.
+          # DEPLOY_COMPRESSION replaces the old COMPRESS variable in the arm64 branch.
           EXPORT_NOOBS=0
           EXPORT_LAST_IMAGE_ONLY=1
-          COMPRESS=1
+          DEPLOY_COMPRESSION=xz
           USE_QEMU=0
           EOF
 
@@ -170,6 +171,10 @@ jobs:
           RUNEOF
 
           chmod +x "${STEP}/00-run.sh"
+
+          # arm64 pi-gen requires an EXPORT_IMAGE file in the stage directory
+          # to trigger image export (absence of SKIP_IMAGES is not sufficient).
+          touch /tmp/pi-gen/stage-byteorder/EXPORT_IMAGE
 
       # ── Run pi-gen ─────────────────────────────────────────────────────────
       - name: Build image with pi-gen
