@@ -75,7 +75,7 @@ jobs:
       - name: Download ble-print-server
         run: |
           mkdir ble-print-server
-          curl -fsSL https://github.com/proffalken/ble-print-server/archive/refs/heads/main.tar.gz \
+          curl -fsSL https://github.com/proffalken/ble-printer-server/archive/refs/heads/main.tar.gz \
             | tar -xz -C ble-print-server --strip-components=1
 
       - name: Inject ByteOrder printer client
