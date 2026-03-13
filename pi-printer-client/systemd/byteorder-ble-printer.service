@@ -7,7 +7,8 @@ Wants=bluetooth.service
 Type=simple
 User=root
 WorkingDirectory=/opt/ble-print-server
-ExecStart=/opt/ble-print-server/venv/bin/python server.py --host 127.0.0.1 --port 8080
+Environment=PRINT_HOST=127.0.0.1
+ExecStart=/opt/ble-print-server/venv/bin/python /opt/ble-print-server/print_server.py --port 8080
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

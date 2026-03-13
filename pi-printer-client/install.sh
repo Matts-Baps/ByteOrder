@@ -20,7 +20,7 @@ apt-get install -y --no-install-recommends \
 # ── ble-print-server ──────────────────────────────────────────────────────────
 if [[ ! -d "$BLE_DIR" ]]; then
     echo "==> Cloning ble-print-server…"
-    git clone https://github.com/proffalken/ble-print-server.git "$BLE_DIR"
+    git clone https://github.com/proffalken/ble-printer-server.git "$BLE_DIR"
 fi
 
 python3 -m venv "$BLE_DIR/venv"

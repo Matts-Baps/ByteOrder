@@ -20,13 +20,19 @@ def connect(ssid: str, psk: str) -> bool:
         capture_output=True,
     )
 
+    from .ap_manager import _find_wifi_interface
+    try:
+        iface = _find_wifi_interface()
+    except RuntimeError:
+        iface = "wlan0"
+
     # Add and activate the connection
     result = subprocess.run(
         [
             "nmcli", "device", "wifi", "connect", ssid,
             "password", psk,
             "name", conn_name,
-            "ifname", "wlan0",
+            "ifname", iface,
         ],
         capture_output=True,
         text=True,
@@ -41,7 +47,7 @@ def connect(ssid: str, psk: str) -> bool:
     for _ in range(CONNECT_TIMEOUT):
         time.sleep(1)
         out = subprocess.run(
-            ["nmcli", "-t", "-f", "GENERAL.STATE", "device", "show", "wlan0"],
+            ["nmcli", "-t", "-f", "GENERAL.STATE", "device", "show", iface],
             capture_output=True, text=True,
         ).stdout
         if "100 (connected)" in out:
