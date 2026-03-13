@@ -17,6 +17,9 @@ def start_ap(ssid: str) -> None:
     # Tear down any existing AP profile
     stop_ap()
 
+    # Ensure WiFi radio is unblocked (Pi OS sometimes soft-blocks on first boot)
+    subprocess.run(["rfkill", "unblock", "wifi"], capture_output=True)
+
     # Create hotspot
     result = subprocess.run(
         [

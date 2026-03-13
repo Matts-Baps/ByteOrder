@@ -14,10 +14,9 @@ apt-get install -y --no-install-recommends \
 useradd --create-home --shell /bin/bash --groups dialout byteorder
 passwd -l byteorder
 
-# ble-print-server venv
+# ble-print-server venv (uses pyproject.toml, not requirements.txt)
 python3 -m venv /opt/ble-print-server/venv
-/opt/ble-print-server/venv/bin/pip install --no-cache-dir \
-  -r /opt/ble-print-server/requirements.txt
+/opt/ble-print-server/venv/bin/pip install --no-cache-dir /opt/ble-print-server
 
 # pi-printer-client venv
 python3 -m venv /opt/byteorder-printer/venv
