@@ -10,8 +10,8 @@ WorkingDirectory=/opt/byteorder-printer
 ExecStart=/opt/byteorder-printer/venv/bin/python -m byteorder_printer.main
 Restart=on-failure
 RestartSec=10
-StandardOutput=journal
-StandardError=journal
+StandardOutput=journal+console
+StandardError=journal+console
 SyslogIdentifier=byteorder-print-client
 
 [Install]
