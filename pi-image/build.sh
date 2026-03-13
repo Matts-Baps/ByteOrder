@@ -22,6 +22,18 @@ die()   { echo -e "\033[1;31mERROR: $*\033[0m" >&2; exit 1; }
 [[ $EUID -eq 0 ]] || die "Run as root: sudo bash pi-image/build.sh"
 cd "$REPO_ROOT"
 
+# ── 0. Dependencies ────────────────────────────────────────────────────────────
+info "Checking dependencies…"
+MISSING=()
+for pkg in qemu-user-static binfmt-support xz-utils parted e2fsprogs wget bc curl; do
+  dpkg -s "$pkg" &>/dev/null || MISSING+=("$pkg")
+done
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+  info "Installing missing packages: ${MISSING[*]}"
+  apt-get install -y --no-install-recommends "${MISSING[@]}"
+fi
+ok
+
 mkdir -p "$WORK_DIR"
 
 # ── 1. Download Pi OS ──────────────────────────────────────────────────────────
