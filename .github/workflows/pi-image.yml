@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - "print-service/**"
+      - "pi-printer-client/**"
       - "pi-image/**"
       - ".github/workflows/pi-image.yml"
   pull_request:
     paths:
-      - "print-service/**"
+      - "pi-printer-client/**"
       - "pi-image/**"
       - ".github/workflows/pi-image.yml"
   workflow_dispatch:
@@ -49,7 +49,7 @@ jobs:
           xz --decompress raspios.img.xz
 
       # The official image ships with a root partition sized to just fit the
-      # OS. Expand by 1.5 GB to accommodate Python packages + OpenTelemetry.
+      # OS. Expand by 1.5 GB to accommodate Python packages + BLE stack.
       - name: Expand root partition
         run: |
           dd if=/dev/zero bs=1M count=1536 >> raspios.img
@@ -72,23 +72,38 @@ jobs:
           sudo mount --bind /proc    /mnt/pi/proc
           sudo mount --bind /sys     /mnt/pi/sys
 
-      - name: Inject ByteOrder print service
+      - name: Download ble-print-server
         run: |
-          sudo mkdir -p /mnt/pi/opt/byteorder-print
-          sudo cp -r print-service/app /mnt/pi/opt/byteorder-print/app
-          sudo cp pi-image/requirements-pi.txt \
-            /mnt/pi/opt/byteorder-print/requirements-pi.txt
+          mkdir ble-print-server
+          curl -fsSL https://github.com/proffalken/ble-printer-server/archive/refs/heads/main.tar.gz \
+            | tar -xz -C ble-print-server --strip-components=1
 
-          sudo cp pi-image/files/byteorder-print.service \
-            /mnt/pi/etc/systemd/system/byteorder-print.service
+      - name: Inject ByteOrder printer client
+        run: |
+          # pi-printer-client
+          sudo mkdir -p /mnt/pi/opt/byteorder-printer
+          sudo cp -r pi-printer-client/byteorder_printer \
+            /mnt/pi/opt/byteorder-printer/byteorder_printer
+          sudo cp pi-printer-client/requirements.txt \
+            /mnt/pi/opt/byteorder-printer/requirements.txt
 
-          sudo mkdir -p /mnt/pi/etc/byteorder
-          sudo cp pi-image/files/print-service.env.template \
-            /mnt/pi/etc/byteorder/print-service.env
-          sudo chmod 750 /mnt/pi/etc/byteorder
-          sudo chmod 640 /mnt/pi/etc/byteorder/print-service.env
+          # ble-print-server
+          sudo mkdir -p /mnt/pi/opt/ble-print-server
+          sudo cp -r ble-print-server/. /mnt/pi/opt/ble-print-server/
 
-          # Copy install script and QEMU binary into the image, run chroot.
+          # Systemd units
+          sudo cp pi-printer-client/systemd/byteorder-print-client.service \
+            /mnt/pi/etc/systemd/system/byteorder-print-client.service
+          sudo cp pi-printer-client/systemd/byteorder-ble-printer.service \
+            /mnt/pi/etc/systemd/system/byteorder-ble-printer.service
+
+          # Config directory (populated by setup portal on first boot)
+          sudo mkdir -p /mnt/pi/etc/byteorder-printer
+
+          # Enable SSH on first boot (headless)
+          sudo touch /mnt/pi/boot/firmware/ssh
+
+          # Run chroot setup
           sudo cp pi-image/scripts/install-chroot.sh /mnt/pi/tmp/install-chroot.sh
           sudo cp /usr/bin/qemu-aarch64-static /mnt/pi/usr/bin/
           sudo chroot /mnt/pi /bin/bash /tmp/install-chroot.sh
@@ -137,7 +152,7 @@ jobs:
             ## ByteOrder Raspberry Pi OS Image — ${{ steps.image.outputs.version }}
 
             Official Raspberry Pi OS Lite (64-bit arm64) with the ByteOrder
-            print service pre-installed and running natively via systemd.
+            BLE printer client pre-installed and running natively via systemd.
 
             **Compatible with:** Pi Zero 2 W, Pi 3, Pi 4, Pi 5.
 
@@ -145,18 +160,15 @@ jobs:
 
             Flash with [Raspberry Pi Imager](https://www.raspberrypi.com/software/):
             1. Choose **Use custom** and select `${{ steps.image.outputs.name }}`.
-            2. Click the settings icon to set hostname, SSH key, and Wi-Fi before writing.
+            2. Click the settings icon to set your SSH key before writing.
+            3. **Do not pre-configure WiFi** — the printer will set this up itself.
 
-            ### First-boot configuration
+            ### First-boot setup
 
-            Edit `/etc/byteorder/print-service.env` and set:
-
-            ```
-            REDIS_URL=redis://<host>:6379
-            DATABASE_URL=postgresql://byteorder:<pass>@<host>:5432/byteorder
-            # OTEL_ENDPOINT=http://<byteorder-host>:4318
-            ```
-
-            Then reboot or run `sudo systemctl start byteorder-print`.
+            1. Power on the Pi. It will broadcast a WiFi AP named **`ByteOrder-XXXXXX`**.
+            2. Connect your phone to that network — a setup portal will open automatically.
+            3. Enter your WiFi credentials and the ByteOrder server URL, then tap **Connect & Save**.
+            4. Once connected, go to **Admin → Printers** and claim the printer using the
+               6-character code shown in the portal.
           files: ${{ steps.image.outputs.path }}
           fail_on_unmatched_files: true

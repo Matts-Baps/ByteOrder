@@ -4,8 +4,20 @@ import logging
 log = logging.getLogger(__name__)
 
 AP_CONN_NAME = "byteorder-ap"
-AP_INTERFACE = "wlan0"
 AP_IP = "192.168.4.1"
+
+
+def _find_wifi_interface() -> str:
+    """Return the name of the first WiFi interface NM knows about."""
+    out = subprocess.run(
+        ["nmcli", "-t", "-f", "DEVICE,TYPE", "device", "status"],
+        capture_output=True, text=True,
+    ).stdout
+    for line in out.splitlines():
+        device, _, dev_type = line.partition(":")
+        if dev_type.strip() == "wifi":
+            return device.strip()
+    raise RuntimeError("No WiFi interface found")
 DNS_CONF = "/etc/NetworkManager/dnsmasq-shared.d/byteorder-captive.conf"
 
 
@@ -17,25 +29,77 @@ def start_ap(ssid: str) -> None:
     # Tear down any existing AP profile
     stop_ap()
 
-    # Create hotspot
+    # Log all network devices so we can see what's actually available
+    dev_status = subprocess.run(
+        ["nmcli", "device", "status"], capture_output=True, text=True
+    )
+    log.info("Network devices:\n%s", dev_status.stdout)
+
+    iface = _find_wifi_interface()
+    log.info("Using WiFi interface: %s", iface)
+
+    # Ensure WiFi radio is unblocked (Pi OS sometimes soft-blocks on first boot)
+    subprocess.run(["rfkill", "unblock", "wifi"], capture_output=True)
+
+    # Set regulatory domain — required before the radio can transmit.
+    subprocess.run(["iw", "reg", "set", "GB"], capture_output=True)
+
+    # Ensure NM is managing the interface
+    subprocess.run(
+        ["nmcli", "device", "set", iface, "managed", "yes"],
+        capture_output=True,
+    )
+
+    # Wait until NM considers the device ready.
+    # Use 'device status' which gives readable state names (not numeric codes).
+    import time
+    for attempt in range(30):
+        out = subprocess.run(
+            ["nmcli", "-t", "-f", "DEVICE,STATE", "device", "status"],
+            capture_output=True, text=True,
+        ).stdout
+        iface_state = ""
+        for line in out.splitlines():
+            if line.startswith(f"{iface}:"):
+                iface_state = line.split(":", 1)[1].strip()
+                break
+        log.info("wlan state (attempt %d): %s", attempt + 1, iface_state)
+        if iface_state and iface_state not in ("unavailable", "deactivating", "unmanaged"):
+            break
+        time.sleep(1)
+    else:
+        raise RuntimeError(f"Device {iface} did not reach ready state after 30s (last: {iface_state})")
+
+    # Write DNS redirect config BEFORE bringing up the connection so
+    # NM's dnsmasq process reads it on startup rather than needing a reload.
+    _install_dns_redirect()
+
+    # Create an open (no password) AP connection profile
     result = subprocess.run(
         [
-            "nmcli", "device", "wifi", "hotspot",
-            "ifname", AP_INTERFACE,
+            "nmcli", "connection", "add",
+            "type", "wifi",
+            "ifname", iface,
             "con-name", AP_CONN_NAME,
             "ssid", ssid,
-            "band", "bg",
+            "802-11-wireless.mode", "ap",
+            "802-11-wireless.band", "bg",
+            "ipv4.method", "shared",
+            "connection.autoconnect", "no",
         ],
-        capture_output=True,
-        text=True,
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"Failed to create AP profile: {result.stderr.strip()}")
+
+    result = subprocess.run(
+        ["nmcli", "connection", "up", AP_CONN_NAME],
+        capture_output=True, text=True,
     )
     if result.returncode != 0:
         raise RuntimeError(f"Failed to start AP: {result.stderr.strip()}")
 
-    # Install captive-portal DNS redirect so iOS/Android detect the portal
-    _install_dns_redirect()
-
-    log.info("AP '%s' started on %s", ssid, AP_INTERFACE)
+    log.info("AP '%s' started on %s", ssid, iface)
 
 
 def stop_ap() -> None:
@@ -53,8 +117,6 @@ def _install_dns_redirect() -> None:
     with open(DNS_CONF, "w") as f:
         # Redirect every DNS query to this host so clients see the captive portal
         f.write(f"address=/#/{AP_IP}\n")
-    # Reload NM so dnsmasq picks up the new config
-    subprocess.run(["nmcli", "general", "reload"], capture_output=True)
 
 
 def _remove_dns_redirect() -> None:
