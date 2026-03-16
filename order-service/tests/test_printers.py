@@ -1,6 +1,3 @@
-import pytest
-
-
 # ── Register ──────────────────────────────────────────────────────────────────
 
 def test_register_new_printer(client):
