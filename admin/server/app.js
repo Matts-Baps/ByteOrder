@@ -62,6 +62,10 @@ if (AUTH_MODE === 'self-hosted') {
   app.use('/api/auth', require('./routes/auth'))
 }
 
+// Public printer endpoints — must be mounted before requireAuth()
+const printersPublic = require('./routes/printers-public')
+app.use('/api/orders/printers', printersPublic)
+
 // Protected API proxies
 app.use('/api/menu', requireAuth(), menuProxy)
 app.use('/api/orders', requireAuth(), orderProxy)
