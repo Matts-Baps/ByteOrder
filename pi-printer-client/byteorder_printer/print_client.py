@@ -19,7 +19,9 @@ def _format_order(order: dict) -> str:
     """Convert an order dict to a plain-text receipt string."""
     lines = []
     lines.append("=" * 32)
-    lines.append(f"ORDER #{order.get('public_id', order.get('id', '?'))[:8].upper()}")
+    # Redis payload uses order_number; fall back to order_id then unknown
+    order_ref = order.get("order_number") or str(order.get("order_id", "?"))
+    lines.append(f"ORDER #{order_ref}")
     lines.append("=" * 32)
 
     customer = order.get("customer_name") or order.get("customer_phone") or ""
@@ -53,7 +55,7 @@ def _send_to_printer(text: str) -> None:
 def run(api_base: str, mac_address: str) -> None:
     """
     Stream SSE events from the backend and print each new order.
-    Reconnects automatically on error.
+    Reconnects automatically on error or if the stream ends.
     """
     url = f"{api_base}/orders/printers/stream"
     headers = {"Authorization": f"Bearer {mac_address}"}
@@ -80,6 +82,9 @@ def run(api_base: str, mac_address: str) -> None:
                 except (json.JSONDecodeError, requests.RequestException) as exc:
                     log.error("Print error: %s", exc)
 
+            log.warning("SSE stream ended cleanly, reconnecting in %ds", RECONNECT_DELAY)
+
         except requests.RequestException as exc:
             log.warning("SSE connection lost (%s), retrying in %ds", exc, RECONNECT_DELAY)
-            time.sleep(RECONNECT_DELAY)
+
+        time.sleep(RECONNECT_DELAY)

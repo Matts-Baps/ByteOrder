@@ -10,6 +10,12 @@ metadata:
     {{- if and .Values.ingress.tls .Values.ingress.tls.enabled }}
     cert-manager.io/cluster-issuer: {{ .Values.ingress.tls.clusterIssuer }}
     {{- end }}
+    # Disable proxy buffering so SSE streams (printer job delivery) are forwarded
+    # to clients immediately rather than held in NGINX's buffer.
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    # Long timeouts for persistent SSE connections from Pi printer clients.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
