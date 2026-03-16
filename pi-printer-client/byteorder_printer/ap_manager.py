@@ -70,6 +70,10 @@ def start_ap(ssid: str) -> None:
     else:
         raise RuntimeError(f"Device {iface} did not reach ready state after 30s (last: {iface_state})")
 
+    # Write DNS redirect config BEFORE bringing up the connection so
+    # NM's dnsmasq process reads it on startup rather than needing a reload.
+    _install_dns_redirect()
+
     # Create an open (no password) AP connection profile
     result = subprocess.run(
         [
@@ -95,9 +99,6 @@ def start_ap(ssid: str) -> None:
     if result.returncode != 0:
         raise RuntimeError(f"Failed to start AP: {result.stderr.strip()}")
 
-    # Install captive-portal DNS redirect so iOS/Android detect the portal
-    _install_dns_redirect()
-
     log.info("AP '%s' started on %s", ssid, iface)
 
 
@@ -116,8 +117,6 @@ def _install_dns_redirect() -> None:
     with open(DNS_CONF, "w") as f:
         # Redirect every DNS query to this host so clients see the captive portal
         f.write(f"address=/#/{AP_IP}\n")
-    # Reload NM so dnsmasq picks up the new config
-    subprocess.run(["nmcli", "general", "reload"], capture_output=True)
 
 
 def _remove_dns_redirect() -> None:
