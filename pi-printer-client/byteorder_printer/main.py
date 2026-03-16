@@ -21,6 +21,26 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
+def _wait_for_ntp(timeout: int = 60) -> None:
+    """Wait for systemd-timesyncd to sync the clock before making TLS connections.
+
+    Pi has no RTC — clock starts wrong on first boot. TLS cert validation
+    fails with 'not yet valid' until NTP corrects the time.
+    """
+    import subprocess
+    log.info("Waiting for NTP time sync…")
+    for elapsed in range(timeout):
+        out = subprocess.run(
+            ["timedatectl", "show", "--property=NTPSynchronized", "--value"],
+            capture_output=True, text=True,
+        ).stdout.strip()
+        if out == "yes":
+            log.info("NTP sync confirmed after %ds", elapsed)
+            return
+        time.sleep(1)
+    log.warning("NTP sync timed out after %ds — TLS connections may fail", timeout)
+
+
 def _register(api_base: str, mac: str) -> bool:
     """POST /orders/printers/register — idempotent. Returns True on success."""
     import requests
@@ -73,6 +93,7 @@ def _enter_ap_mode(cfg, mac: str) -> None:
 
         if wifi_manager.connect(ssid, psk):
             log.info("WiFi connected, registering…")
+            _wait_for_ntp()
             _register(api_base, mac)
             saved_params["ok"] = True
         else:
@@ -139,6 +160,7 @@ def main() -> None:
     # Try to connect with saved credentials
     log.info("Connecting to WiFi: %s", cfg.wifi_ssid)
     if wifi_manager.connect(cfg.wifi_ssid, cfg.wifi_psk or ""):
+        _wait_for_ntp()
         if _register(cfg.api_base, mac):
             _start_print_loop(cfg, mac)
             return

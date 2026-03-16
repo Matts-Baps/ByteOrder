@@ -7,7 +7,8 @@ apt-get install -y --no-install-recommends \
   python3-venv python3-pip \
   network-manager \
   bluetooth bluez \
-  rfkill iw wireless-tools
+  rfkill iw wireless-tools \
+  fake-hwclock
 
 # Create the byteorder user (auto-assigned UID, locked password).
 # Any UID >= 1000 user suppresses Pi OS's first-boot username wizard.
