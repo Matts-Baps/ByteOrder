@@ -50,21 +50,25 @@ def start_ap(ssid: str) -> None:
         capture_output=True,
     )
 
-    # Wait until NM considers the device ready (disconnected).
-    # "deactivating" means a previous AP is still tearing down;
-    # "unavailable" means rfkill or regulatory domain not yet applied.
+    # Wait until NM considers the device ready.
+    # Use 'device status' which gives readable state names (not numeric codes).
     import time
     for attempt in range(30):
-        state = subprocess.run(
-            ["nmcli", "-t", "-f", "STATE", "device", "show", iface],
+        out = subprocess.run(
+            ["nmcli", "-t", "-f", "DEVICE,STATE", "device", "status"],
             capture_output=True, text=True,
         ).stdout
-        log.info("wlan state (attempt %d): %s", attempt + 1, state.strip())
-        if "disconnected" in state:
+        iface_state = ""
+        for line in out.splitlines():
+            if line.startswith(f"{iface}:"):
+                iface_state = line.split(":", 1)[1].strip()
+                break
+        log.info("wlan state (attempt %d): %s", attempt + 1, iface_state)
+        if iface_state and iface_state not in ("unavailable", "deactivating", "unmanaged"):
             break
         time.sleep(1)
     else:
-        raise RuntimeError(f"Device {iface} did not reach disconnected state after 30s")
+        raise RuntimeError(f"Device {iface} did not reach ready state after 30s (last: {iface_state})")
 
     # Create hotspot
     result = subprocess.run(
