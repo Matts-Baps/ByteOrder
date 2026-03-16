@@ -38,6 +38,7 @@ const apiLimiter = rateLimit({
   max: 300,
   standardHeaders: true,  // Return RateLimit-* headers (RFC 6585 draft)
   legacyHeaders: false,
+  skip: (req) => req.path.startsWith('/orders/printers'),
 })
 
 app.use(cors())
