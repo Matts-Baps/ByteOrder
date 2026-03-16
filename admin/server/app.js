@@ -38,11 +38,16 @@ const apiLimiter = rateLimit({
   max: 300,
   standardHeaders: true,  // Return RateLimit-* headers (RFC 6585 draft)
   legacyHeaders: false,
-  skip: (req) => req.path.startsWith('/orders/printers'),
 })
 
 app.use(cors())
 app.use(express.json())
+
+// Public printer endpoints — mounted before the rate limiter so long-lived
+// SSE connections and device registrations are never rate-limited.
+const printersPublic = require('./routes/printers-public')
+app.use('/api/orders/printers', printersPublic)
+
 app.use('/api/', apiLimiter)
 
 if (AUTH_MODE === 'cloud') {
@@ -62,10 +67,6 @@ app.get('/api/config', (req, res) => {
 if (AUTH_MODE === 'self-hosted') {
   app.use('/api/auth', require('./routes/auth'))
 }
-
-// Public printer endpoints — must be mounted before requireAuth()
-const printersPublic = require('./routes/printers-public')
-app.use('/api/orders/printers', printersPublic)
 
 // Protected API proxies
 app.use('/api/menu', requireAuth(), menuProxy)
