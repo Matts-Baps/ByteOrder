@@ -13,7 +13,7 @@ function getKitchenId(req) {
   return auth?.orgId || auth?.userId
 }
 
-router.all('/*', async (req, res) => {
+router.all('/{*path}', async (req, res) => {
   const kitchenId = getKitchenId(req)
   if (!kitchenId) {
     return res.status(403).json({ error: 'No organization selected' })
