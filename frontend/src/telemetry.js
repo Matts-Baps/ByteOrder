@@ -1,7 +1,7 @@
 import { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
 import { BatchSpanProcessor, StackContextManager } from '@opentelemetry/sdk-trace-web'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
-import { Resource } from '@opentelemetry/resources'
+import { resourceFromAttributes } from '@opentelemetry/resources'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { registerInstrumentations } from '@opentelemetry/instrumentation'
 import { DocumentLoadInstrumentation } from '@opentelemetry/instrumentation-document-load'
@@ -12,7 +12,7 @@ const endpoint = import.meta.env.VITE_OTEL_ENDPOINT
 
 if (endpoint) {
   const provider = new WebTracerProvider({
-    resource: new Resource({ 'service.name': 'byteorder-frontend' }),
+    resource: resourceFromAttributes({ 'service.name': 'byteorder-frontend' }),
   })
 
   provider.addSpanProcessor(
