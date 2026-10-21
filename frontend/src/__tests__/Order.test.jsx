@@ -41,6 +41,17 @@ describe('Order page assistant', () => {
     expect(screen.queryByRole('button', { name: 'Ask for help' })).not.toBeInTheDocument()
   })
 
+  // Without the assistant deployed, nginx's SPA fallback answers /assistant-api/health
+  // with index.html and a 200, which must not count as available.
+  it('hides the assistant when the health check returns the app page instead', async () => {
+    assistantApi.get.mockResolvedValue({ data: '<!DOCTYPE html><html></html>' })
+    const user = userEvent.setup()
+    await startOrder(user)
+    // Let the health check settle before asserting.
+    await screen.findByText(/What are you having/)
+    expect(screen.queryByRole('button', { name: 'Ask for help' })).not.toBeInTheDocument()
+  })
+
   it('puts the draft in the basket for the customer to confirm', async () => {
     assistantApi.get.mockResolvedValue({ data: { status: 'ok' } })
     assistantApi.post.mockResolvedValue({ data: { reply: 'One cola.', draft: DRAFT } })

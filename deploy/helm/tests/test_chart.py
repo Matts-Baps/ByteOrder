@@ -107,3 +107,28 @@ def test_old_otel_endpoint_value_fails_with_a_hint():
     result = render("otelEndpoint=http://collector:4318")
     assert result.returncode != 0
     assert "otel.endpoint" in result.stderr
+
+
+# --- frontend nginx config rollout -------------------------------------------
+
+
+def frontend_annotations(*sets: str) -> dict:
+    result = render(*sets)
+    assert result.returncode == 0, result.stderr
+    for doc in yaml.safe_load_all(result.stdout):
+        if doc and doc["kind"] == "Deployment" and doc["metadata"]["name"] == "byteorder-frontend":
+            return doc["spec"]["template"]["metadata"].get("annotations") or {}
+    raise AssertionError("no frontend deployment")
+
+
+def test_frontend_restarts_when_its_nginx_config_changes():
+    # The config is mounted with subPath, so a running pod never sees ConfigMap
+    # changes. A checksum on the pod template makes Helm roll the pod instead.
+    off = frontend_annotations()
+    on = frontend_annotations("assistant.enabled=true", "assistant.ollamaUrl=http://ollama:11434")
+    assert off.get("checksum/nginx-config")
+    assert off["checksum/nginx-config"] != on["checksum/nginx-config"]
+
+
+def test_frontend_checksum_is_stable():
+    assert frontend_annotations() == frontend_annotations()
