@@ -98,3 +98,13 @@ jobs:
         with:
           sarif_file: trivy-image.sarif
           category: trivy-admin
+
+  # Roll the new image out to Ossway through ArgoCD (#70).
+  deploy:
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy-ossway.yml
+    with:
+      service: admin
+    secrets:
+      HOME_INFRA_TOKEN: ${{ secrets.HOME_INFRA_TOKEN }}

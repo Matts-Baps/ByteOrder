@@ -146,6 +146,12 @@ ingress:
 
 Each Clerk organisation maps to one kitchen. The admin sets a friendly slug in **Admin → Settings**; the customer URL is then `order.example.com/k/<slug>/order`.
 
+### Image versions and GitOps
+
+Every service uses `imageTag` (default `latest`) unless it's pinned with `images.<service>.tag`, for example `images.frontend.tag: sha-4194200`. CI tags each image `sha-<short commit>` as well as `latest`.
+
+Pinned tags suit GitOps tools such as ArgoCD, which only roll out a new image when the manifests change. `deploy/scripts/set-image-tag.sh <values-file> <service> <tag>` pins one service and leaves the rest of the values file alone. The project's own Ossway deployment uses it from CI (`.github/workflows/deploy-ossway.yml`): after an image is pushed from `main`, CI commits the new tag to the values file ArgoCD watches. That job needs a `HOME_INFRA_TOKEN` secret and is skipped without it.
+
 ---
 
 ## Admin panel

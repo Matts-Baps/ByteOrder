@@ -205,3 +205,42 @@ def test_nginx_config_includes_the_generated_telemetry_proxy():
 def test_session_replay_can_be_switched_on():
     env = deployments(*BROWSER, "otel.browser.sessionReplay=true")["byteorder-frontend"]
     assert env["BROWSER_TELEMETRY_SESSION_REPLAY"]["value"] == "true"
+
+
+# --- per-service image tags (#70) -------------------------------------------------
+
+SERVICES = BACKENDS + ["frontend"]
+
+
+def images(*sets: str) -> dict[str, str]:
+    """Render the chart and return {deployment name: image}."""
+    result = render(*sets)
+    assert result.returncode == 0, result.stderr
+    out = {}
+    for doc in yaml.safe_load_all(result.stdout):
+        if doc and doc["kind"] == "Deployment":
+            out[doc["metadata"]["name"]] = doc["spec"]["template"]["spec"]["containers"][0]["image"]
+    return out
+
+
+def test_every_service_uses_image_tag_by_default():
+    imgs = images()
+    for svc in SERVICES:
+        assert imgs[f"byteorder-{svc}"].endswith(f"/{svc}:latest")
+
+
+def test_a_service_can_be_pinned_to_its_own_tag():
+    imgs = images("images.frontend.tag=sha-4194200")
+    assert imgs["byteorder-frontend"].endswith("/frontend:sha-4194200")
+    assert imgs["byteorder-admin"].endswith("/admin:latest")
+
+
+def test_service_names_with_hyphens_can_be_pinned():
+    imgs = images("images.menu-service.tag=sha-abcdef0")
+    assert imgs["byteorder-menu-service"].endswith("/menu-service:sha-abcdef0")
+
+
+def test_unpinned_services_follow_image_tag():
+    imgs = images("imageTag=v1", "images.admin.tag=sha-2222222")
+    assert imgs["byteorder-admin"].endswith("/admin:sha-2222222")
+    assert imgs["byteorder-order-service"].endswith("/order-service:v1")
