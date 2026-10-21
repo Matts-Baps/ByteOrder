@@ -36,3 +36,12 @@ def test_run_case_feeds_replies_back_and_checks_results():
     second = json.loads(route.calls[1].request.content)
     assert [m["role"] for m in second["messages"]] == ["user", "assistant", "user"]
     assert second["conversation_id"].startswith("scenario-x-")
+
+
+def test_demo_allergens_cover_every_ingredient_with_valid_ids():
+    from app.allergens import ALLERGENS as VALID
+    from scenarios.demo_menu import ALLERGENS
+    used = {name for items in MENU.values() for _, _, toppings, extras in items for name in toppings + extras}
+    assert used == set(ALLERGENS)
+    for name, allergens in ALLERGENS.items():
+        assert allergens is None or set(allergens) <= set(VALID), name

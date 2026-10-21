@@ -3,8 +3,14 @@
 Toppings follow the customer ordering page: every ingredient linked to an item
 can be switched on or off, and `is_default` decides whether it starts on.
 Option groups are ignored, as the ordering page does not use them yet.
+
+Allergens (#74): each topping carries the menu service's allergen list and
+whether it has been checked. What an item contains depends on which toppings
+are included, so allergens are worked out for a selection of toppings.
 """
 from dataclasses import dataclass
+
+from app.allergens import ALLERGENS, words
 
 MAX_ORDER_ITEMS = 10
 
@@ -14,6 +20,13 @@ class Topping:
     id: int
     name: str
     default: bool
+    allergens: tuple[str, ...] = ()
+    checked: bool = False
+
+    def label(self) -> str:
+        if not self.checked:
+            return f"{self.name} (allergens not confirmed)"
+        return f"{self.name} ({words(self.allergens)})" if self.allergens else self.name
 
 
 @dataclass(frozen=True)
@@ -27,6 +40,15 @@ class Item:
     def topping(self, name: str) -> Topping | None:
         wanted = name.strip().casefold()
         return next((t for t in self.toppings if t.name.casefold() == wanted), None)
+
+    def allergen_note(self) -> str:
+        """Allergens in the item as it comes, for the menu summary."""
+        served = [t for t in self.toppings if t.default]
+        # With nothing listed, nobody has said what is in the item.
+        if not served or not all(t.checked for t in served):
+            return "allergens: not confirmed"
+        found = {a for t in served for a in t.allergens}
+        return f"allergens as served: {words(found) or 'none of the 14 major allergens'}"
 
 
 class Menu:
@@ -44,7 +66,13 @@ class Menu:
                 if not raw.get("active", True):
                     continue
                 toppings = tuple(
-                    Topping(ii["ingredient"]["id"], ii["ingredient"]["name"], ii["is_default"])
+                    Topping(
+                        ii["ingredient"]["id"],
+                        ii["ingredient"]["name"],
+                        ii["is_default"],
+                        tuple(a for a in ii["ingredient"].get("allergens", []) if a in ALLERGENS),
+                        ii["ingredient"].get("allergens_checked", False) is True,
+                    )
                     for ii in raw.get("item_ingredients", [])
                     if ii["ingredient"].get("active", True)
                 )
@@ -69,12 +97,13 @@ class Menu:
             line = f"- [{item.id}] {item.name}"
             if item.description:
                 line += f" - {item.description}"
-            defaults = [t.name for t in item.toppings if t.default]
-            extras = [t.name for t in item.toppings if not t.default]
+            defaults = [t.label() for t in item.toppings if t.default]
+            extras = [t.label() for t in item.toppings if not t.default]
             if defaults:
                 line += f"; comes with: {', '.join(defaults)}"
             if extras:
                 line += f"; optional extras: {', '.join(extras)}"
+            line += f"; {item.allergen_note()}"
             lines.append(line)
         return "\n".join(lines) if lines else "(The menu is empty.)"
 
@@ -126,6 +155,41 @@ class Menu:
         if not errors and len(items) > MAX_ORDER_ITEMS:
             errors.append(f"An order can have at most {MAX_ORDER_ITEMS} items.")
         return ([] if errors else items), errors
+
+    def allergen_conflicts(self, items: list[dict], avoid: set[str]) -> list[str]:
+        """Why a valid draft can't go to a customer avoiding `avoid`, if it can't.
+
+        Every included topping must be checked and free of those allergens, and
+        an item with nothing included has no allergen information at all.
+        """
+        if not avoid:
+            return []
+        problems: list[str] = []
+        seen: set[tuple] = set()
+        for basket_item in items:
+            item = self.item(basket_item["menu_item_id"])
+            included = {i["ingredient_id"] for i in basket_item["ingredients"] if i["included"]}
+            toppings = [t for t in item.toppings if t.id in included]
+            if not toppings:
+                problem = (f"{item.name} has no allergen information. Leave it out, or tell the "
+                           "customer to check with the cook before ordering it.")
+                if problem not in seen:
+                    seen.add(problem)
+                    problems.append(problem)
+                continue
+            for t in toppings:
+                key = (item.id, t.id)
+                if key in seen:
+                    continue
+                seen.add(key)
+                hint = "Remove it" if t.default else "Leave it off"
+                if not t.checked:
+                    problems.append(f"{item.name}: the allergens in {t.name} are not confirmed. "
+                                    f"{hint}, or tell the customer to check with the cook.")
+                elif avoid & set(t.allergens):
+                    problems.append(f"{item.name}: {t.name} contains {words(avoid & set(t.allergens))}. "
+                                    f"{hint}, or choose a different item.")
+        return problems
 
     def describe_order(self, items: list[dict]) -> str:
         """One-line, human-readable summary of basket items."""

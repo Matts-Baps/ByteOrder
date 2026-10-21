@@ -11,8 +11,8 @@ def test_summary_lists_ids_toppings_and_extras(categories):
     summary = Menu.from_categories(categories).summary()
     assert "Burgers:" in summary
     assert "[10] Classic Burger - Beef patty in a brioche bun" in summary
-    assert "comes with: Cheddar, Red Onion" in summary
-    assert "optional extras: Bacon" in summary
+    assert "comes with: Cheddar (allergens not confirmed), Red Onion (allergens not confirmed)" in summary
+    assert "optional extras: Bacon (allergens not confirmed)" in summary
     assert "[20] Lemonade" in summary
 
 
