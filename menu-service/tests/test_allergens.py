@@ -104,7 +104,8 @@ def test_update_can_mark_checked(client, db):
 
 def test_delete_removes_allergen_rows(client, db):
     ing = _ingredient(db, "Bun", ["gluten"])
-    assert client.delete(f"/ingredients/{ing.id}").status_code == 204
+    response = client.delete(f"/ingredients/{ing.id}")
+    assert response.status_code == 204
     assert db.query(models.IngredientAllergen).count() == 0
 
 
