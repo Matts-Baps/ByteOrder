@@ -61,6 +61,16 @@ otel:
     key: headers
   # Any other OTEL_* variables, e.g. OTEL_RESOURCE_ATTRIBUTES.
   env: {}
+  # Browser telemetry with the Dash0 Web SDK (#62). The browser sends to
+  # /otel on the frontend's own site and nginx forwards it to otel.endpoint
+  # (which must speak OTLP over HTTP), adding otel.headersSecret if set, so no
+  # credentials reach the browser.
+  browser:
+    enabled: false
+    # Percentage of browser sessions to record (0-100).
+    sampleRate: 100
+    # Record sessions for replay in Dash0. Typed text is masked.
+    sessionReplay: false
 
 # Customer ordering assistant, backed by a model on an Ollama server.
 assistant:

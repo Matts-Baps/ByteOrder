@@ -6,8 +6,6 @@ COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     npm ci
 COPY . .
-ARG VITE_OTEL_ENDPOINT=""
-ENV VITE_OTEL_ENDPOINT=$VITE_OTEL_ENDPOINT
 RUN npm run build
 
 FROM nginx:alpine
@@ -15,4 +13,6 @@ FROM nginx:alpine
 RUN apk upgrade --no-cache
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Switches browser telemetry on at container start when configured (#62).
+COPY --chmod=755 docker-entrypoint.d/40-byteorder-browser-telemetry.sh /docker-entrypoint.d/
 EXPOSE 80

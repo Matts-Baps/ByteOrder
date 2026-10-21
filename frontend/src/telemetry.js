@@ -1,42 +1,43 @@
-import { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
-import { BatchSpanProcessor, StackContextManager } from '@opentelemetry/sdk-trace-web'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
-import { resourceFromAttributes } from '@opentelemetry/resources'
-import { W3CTraceContextPropagator } from '@opentelemetry/core'
-import { registerInstrumentations } from '@opentelemetry/instrumentation'
-import { DocumentLoadInstrumentation } from '@opentelemetry/instrumentation-document-load'
-import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch'
-import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request'
+// Browser telemetry with the Dash0 Web SDK (#62). Off unless the container's
+// start-up script switched it on in /runtime-config.js.
+//
+// The SDK sends to /otel on this site. nginx forwards that to the
+// OpenTelemetry collector and adds any real credentials, so none are shipped
+// to the browser.
 
-const endpoint = import.meta.env.VITE_OTEL_ENDPOINT
+// The SDK insists on a token. nginx strips this one before forwarding.
+const PLACEHOLDER_TOKEN = 'added-by-nginx'
 
-if (endpoint) {
-  const provider = new WebTracerProvider({
-    resource: resourceFromAttributes({ 'service.name': 'byteorder-frontend' }),
-  })
+const INSTRUMENTATIONS = [
+  '@dash0/navigation',
+  '@dash0/web-vitals',
+  '@dash0/error',
+  '@dash0/fetch',
+  '@dash0/xhr',
+  '@dash0/frustration-signals',
+]
 
-  provider.addSpanProcessor(
-    new BatchSpanProcessor(
-      new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }),
-    ),
-  )
+export async function startTelemetry(
+  config = window.__BYTEORDER__?.telemetry,
+  origin = window.location.origin,
+) {
+  if (!config?.enabled) return false
 
-  provider.register({
-    contextManager: new StackContextManager(),
-    propagator: new W3CTraceContextPropagator(),
-  })
-
-  // Propagate trace context to all outbound requests so the full
-  // Frontend → Admin → Menu/Order service chain is linked.
-  registerInstrumentations({
-    instrumentations: [
-      new DocumentLoadInstrumentation(),
-      new FetchInstrumentation({
-        propagateTraceHeaderCorsUrls: /.*/,
-      }),
-      new XMLHttpRequestInstrumentation({
-        propagateTraceHeaderCorsUrls: /.*/,
-      }),
-    ],
-  })
+  // Only download the SDK, and the replay recorder, when they're switched on.
+  const { init } = await import('@dash0/sdk-web')
+  const opts = {
+    serviceName: config.serviceName || 'byteorder-frontend',
+    endpoint: { url: `${origin}/otel`, authToken: PLACEHOLDER_TOKEN },
+    sessionSamplingRate: config.sampleRate ?? 100,
+    enabledInstrumentations: INSTRUMENTATIONS,
+  }
+  if (config.sessionReplay) {
+    const { recorder } = await import('@dash0/sdk-web/session-recording')
+    opts.enabledInstrumentations = [...INSTRUMENTATIONS, '@dash0/session-recording']
+    // Anything typed (names, chat messages) is replaced with asterisks before
+    // it leaves the browser.
+    opts.sessionRecording = { recorder, maskAllInputs: true }
+  }
+  init(opts)
+  return true
 }
