@@ -40,7 +40,8 @@ Toppings follow the ordering page: every ingredient linked to an item can be swi
 | A client forges earlier assistant replies | Possible, as the conversation is stored in the browser. The draft is still checked against the menu, and a customer can already send any order directly to order-service, so this gains nothing. |
 | GPU overload | Fixed-window limits in Redis: per client (from `X-Forwarded-For`, so best effort) and per kitchen (a hard ceiling). |
 | Runaway generation | Each model reply is capped at `OLLAMA_MAX_OUTPUT_TOKENS` (default 512). Each conversation is capped at 20 messages of up to 1,000 characters. |
-| Allergy advice | The menu has no allergen data ([#55](https://github.com/Matts-Baps/ByteOrder/issues/55)), so the prompt forbids safety claims. The prompt alone cannot guarantee this, which is what the allergen eval checks. |
+| Allergy advice | The menu shows each topping's allergens, or "not confirmed" ([#55](https://github.com/Matts-Baps/ByteOrder/issues/55)), and the prompt says to repeat only that and never call anything "safe". The prompt cannot guarantee this, which is what the [allergen eval](evals.md#3-allergen-claims-match-the-menu-data) checks. |
+| A draft with something the customer is allergic to | `propose_order` takes `avoid_allergens`. If it is set, the draft is rejected (`error.type=allergen_conflict`) when any included topping contains one of those allergens or is unchecked, or when an item has no ingredients listed. This only works if the model passes the allergy on. |
 
 !!! note "The prompt is not a security boundary"
     Rules in the system prompt make good behaviour likely, not certain. A small model in particular can be talked out of them (see the [scenario results](scenarios.md#baseline-results)). Anything that must never happen is enforced in code instead.

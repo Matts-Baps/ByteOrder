@@ -1,4 +1,9 @@
-"""Demo menu used by the scenarios. Each item is (name, description, toppings, extras)."""
+"""Demo menu used by the scenarios. Each item is (name, description, toppings, extras).
+
+ALLERGENS gives each ingredient's allergens (#74). Ingredients set to None are
+left unchecked, and the drinks have no ingredients, so the scenarios also cover
+"not confirmed".
+"""
 
 KITCHEN_NAME = "Garden Kitchen"
 
@@ -16,10 +21,10 @@ MENU = {
     ],
     "Pizza": [
         ("Margherita", "Wood-fired, 10 inch",
-         ["Tomato Sauce", "Mozzarella", "Basil"],
+         ["Pizza Dough", "Tomato Sauce", "Mozzarella", "Basil"],
          ["Olives", "Jalapenos", "Pepperoni"]),
         ("Pepperoni Pizza", "Wood-fired, 10 inch",
-         ["Tomato Sauce", "Mozzarella", "Pepperoni"],
+         ["Pizza Dough", "Tomato Sauce", "Mozzarella", "Pepperoni"],
          ["Jalapenos", "Red Onion"]),
     ],
     "Sides": [
@@ -31,4 +36,32 @@ MENU = {
         ("Cola", None, [], []),
         ("Sparkling Water", None, [], []),
     ],
+}
+
+ALLERGENS = {
+    "Brioche Bun": ["gluten", "eggs", "sesame"],
+    "Beef Patty": [],
+    "Cheddar": ["milk"],
+    "Lettuce": [],
+    "Tomato": [],
+    "Red Onion": [],
+    "Pickles": ["mustard", "sulphites"],
+    "Bacon": [],
+    "Jalapenos": [],
+    "Spiced Bean Patty": ["celery", "mustard"],
+    "Vegan Mayo": ["mustard", "soya"],
+    "Grilled Halloumi": ["milk"],
+    "Rocket": [],
+    "Roasted Pepper": [],
+    "Chilli Jam": None,
+    "Pizza Dough": ["gluten"],
+    "Tomato Sauce": [],
+    "Mozzarella": ["milk"],
+    "Basil": [],
+    "Olives": [],
+    "Pepperoni": [],
+    "Sea Salt": [],
+    "Rosemary Salt": [],
+    "Pomegranate": [],
+    "Yoghurt Dip": ["milk"],
 }

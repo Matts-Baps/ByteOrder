@@ -5,6 +5,7 @@ if valid, hands it back to the customer, who confirms it themselves.
 """
 from dataclasses import dataclass
 
+from app.allergens import ALLERGENS, words
 from app.menu import Menu
 
 PROPOSE_ORDER = {
@@ -39,7 +40,17 @@ PROPOSE_ORDER = {
                         },
                         "required": ["menu_item_id"],
                     },
-                }
+                },
+                "avoid_allergens": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": list(ALLERGENS)},
+                    "description": (
+                        "Every allergen the customer has said they must avoid. The draft is "
+                        "rejected if it contains one, or anything whose allergens are not "
+                        "confirmed. A nut allergy means peanuts and tree_nuts; dairy means "
+                        "milk; coeliac means gluten."
+                    ),
+                },
             },
             "required": ["items"],
         },
@@ -67,18 +78,34 @@ def execute(name: str, arguments: dict, menu: Menu) -> ToolOutcome:
     items = arguments.get("items")
     if not isinstance(items, list):
         items = []
+    avoid = arguments.get("avoid_allergens") or []
+    if not isinstance(avoid, list):
+        avoid = [avoid]
     draft, errors = menu.build_order(items)
+    unknown = sorted({str(a) for a in avoid} - set(ALLERGENS))
+    if unknown:
+        errors.append(f"Unknown allergens: {', '.join(unknown)}. Use these ids: {', '.join(ALLERGENS)}.")
     if errors:
-        return ToolOutcome(
-            result="The draft was not saved:\n- " + "\n- ".join(errors) + "\nFix these and call propose_order again.",
-            error_type="invalid_order",
-        )
+        return _not_saved(errors, "invalid_order")
+
+    conflicts = menu.allergen_conflicts(draft, set(avoid))
+    if conflicts:
+        return _not_saved(conflicts, "allergen_conflict")
+
     summary = menu.describe_order(draft)
+    checked = f" Checked against the customer's allergies: {words(avoid)}." if avoid else ""
     return ToolOutcome(
         result=(
-            f"Draft saved: {summary}. Tell the customer what is in the draft and ask them "
+            f"Draft saved: {summary}.{checked} Tell the customer what is in the draft and ask them "
             "to press \"Use this order\" to check it in their basket."
         ),
         draft=draft,
         draft_summary=summary,
+    )
+
+
+def _not_saved(errors: list[str], error_type: str) -> ToolOutcome:
+    return ToolOutcome(
+        result="The draft was not saved:\n- " + "\n- ".join(errors) + "\nFix these and call propose_order again.",
+        error_type=error_type,
     )

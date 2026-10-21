@@ -3,13 +3,14 @@
     uv run python -m scenarios.seed --menu-url http://localhost:9000 --kitchen default
 
 Skips categories that already exist, so it is safe to run more than once.
+Allergens are set on every demo ingredient each time.
 Talks to menu-service directly, so only use it against a local or test stack.
 """
 import argparse
 
 import httpx
 
-from scenarios.demo_menu import KITCHEN_NAME, MENU
+from scenarios.demo_menu import ALLERGENS, KITCHEN_NAME, MENU
 
 
 def seed(menu_url: str, kitchen_id: str) -> None:
@@ -39,6 +40,11 @@ def seed(menu_url: str, kitchen_id: str) -> None:
                     client.post(f"/items/{item_id}/ingredients",
                                 json={"ingredient_id": ingredient_id(extra), "is_default": False}).raise_for_status()
             print(f"added {category} ({len(items)} items)")
+
+        # Set allergens on every demo ingredient, including ones that already existed.
+        for name, allergens in ALLERGENS.items():
+            body = {"name": name, "allergens": allergens or [], "allergens_checked": allergens is not None}
+            client.put(f"/ingredients/{ingredient_id(name)}", json=body).raise_for_status()
 
         client.put("/settings/kitchen_name", json={"value": KITCHEN_NAME}).raise_for_status()
 
