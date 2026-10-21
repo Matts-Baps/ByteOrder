@@ -184,6 +184,12 @@ ingredients), `allergens.in_extras` (what optional extras would add) and
 `allergens.confirmed`. `GET /allergens/` lists the allergen ids and labels.
 Option groups have no allergen data.
 
+On the customer ordering page each item shows "Contains: …" and what optional
+extras can add, or "Allergens not confirmed" (with anything known so far) when
+an ingredient is unchecked. The list follows the customer's topping choices, and
+each basket item shows its own. A fixed line on every menu step reads "Prepared
+in a home kitchen. Ask the cook if you have a serious allergy."
+
 ### Branding
 
 **Admin → Settings** lets you customise:

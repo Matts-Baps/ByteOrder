@@ -3,6 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { menuApi, orderApi, assistantApi } from '../lib/api'
 import { useKitchen } from '../contexts/KitchenContext'
 import AssistantChat from '../components/AssistantChat'
+import { summarise, describeAllergens, describeExtras } from '../lib/allergens'
+
+function AllergenLine({ summary, labels, ...props }) {
+  return (
+    <p
+      {...props}
+      className={`text-xs mt-1 ${summary.confirmed ? 'text-gray-500' : 'text-amber-700 font-medium'}`}
+    >
+      {describeAllergens(summary, labels)}
+    </p>
+  )
+}
 
 const STEPS = { NAME: 'name', CATEGORY: 'category', ITEM: 'item', CUSTOMISE: 'customise', BASKET: 'basket', CONFIRM: 'confirm' }
 
@@ -20,9 +32,15 @@ export default function Order() {
   const [kitchenName, setKitchenName] = useState('ByteOrder')
   const [assistantAvailable, setAssistantAvailable] = useState(false)
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const [allergens, setAllergens] = useState([]) // [{id, label}] in display order
 
   useEffect(() => {
     menuApi.get('/categories/').then(({ data }) => setCategories(data))
+    // Labels only; without them allergen ids are shown. Anything but a list
+    // (say, an HTML fallback page) is ignored.
+    menuApi.get('/allergens/')
+      .then(({ data }) => Array.isArray(data) && setAllergens(data))
+      .catch(() => {})
     menuApi.get('/settings/kitchen_name').then(({ data }) => {
       if (data.value) setKitchenName(data.value)
     }).catch(() => {})
@@ -32,6 +50,23 @@ export default function Order() {
       .then(({ data }) => setAssistantAvailable(data?.status === 'ok'))
       .catch(() => {})
   }, [])
+
+  const allergenLabels = Object.fromEntries(allergens.map(a => [a.id, a.label]))
+  const allergenOrder = allergens.map(a => a.id)
+
+  // Allergens in what the customer will actually get, given their topping choices.
+  function chosenAllergens(menuItem, included) {
+    const ingredients = (menuItem?.item_ingredients ?? [])
+      .filter(ii => included[ii.ingredient.id])
+      .map(ii => ii.ingredient)
+    return summarise(ingredients, allergenOrder)
+  }
+
+  function basketAllergens(entry) {
+    const menuItem = categories.flatMap(c => c.items ?? []).find(i => i.id === entry.menu_item_id)
+    const included = Object.fromEntries(entry.ingredients.map(i => [i.ingredient_id, i.included]))
+    return chosenAllergens(menuItem, included)
+  }
 
   function applyDraft(items) {
     // The draft is a complete order, so it replaces the basket. The customer
@@ -181,6 +216,14 @@ export default function Order() {
                       {item.item_ingredients.filter(ii => ii.is_default).map(ii => ii.ingredient.name).join(', ')}
                     </p>
                   )}
+                  {item.allergens && (
+                    <>
+                      <AllergenLine summary={item.allergens} labels={allergenLabels} />
+                      {item.allergens.confirmed && describeExtras(item.allergens.in_extras, allergenLabels) && (
+                        <p className="text-xs text-gray-400">{describeExtras(item.allergens.in_extras, allergenLabels)}</p>
+                      )}
+                    </>
+                  )}
                 </button>
               ))}
             </div>
@@ -218,6 +261,17 @@ export default function Order() {
               </div>
             </div>
 
+            <div className="bg-brand-surface rounded-2xl shadow px-5 py-3 mb-6">
+              <AllergenLine
+                data-testid="allergen-summary"
+                summary={chosenAllergens(
+                  selectedItem,
+                  Object.fromEntries(Object.entries(customIngredients).map(([id, v]) => [id, v.included])),
+                )}
+                labels={allergenLabels}
+              />
+            </div>
+
             <button
               onClick={addToBasket}
               className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl text-lg transition-colors"
@@ -251,6 +305,7 @@ export default function Order() {
                     ) : (
                       <p className="text-sm text-gray-400 mt-1">Plain</p>
                     )}
+                    <AllergenLine summary={basketAllergens(item)} labels={allergenLabels} />
                   </div>
                 ))}
               </div>
@@ -272,6 +327,12 @@ export default function Order() {
               </button>
             </div>
           </div>
+        )}
+
+        {step !== STEPS.NAME && (
+          <p className="mt-8 text-center text-xs text-gray-500">
+            Prepared in a home kitchen. Ask the cook if you have a serious allergy.
+          </p>
         )}
       </div>
     </div>
