@@ -58,6 +58,19 @@ class Frontend:
         return result.stdout + result.stderr
 
 
+def wait_until_serving(fe: Frontend, attempts: int = 50) -> bool:
+    for _ in range(attempts):
+        try:
+            if fe.request("/")[0] == 200:
+                return True
+        except subprocess.CalledProcessError:
+            # curl fails until nginx is listening; try again shortly.
+            time.sleep(0.1)
+            continue
+        time.sleep(0.1)
+    return False
+
+
 @pytest.fixture
 def frontend(tmp_path):
     """Start the frontend nginx with the given env, and stop it afterwards."""
@@ -84,14 +97,9 @@ def frontend(tmp_path):
         subprocess.run(args + [IMAGE], check=True, capture_output=True)
         started.append(name)
         fe = Frontend(name)
-        for _ in range(50):
-            try:
-                if fe.request("/")[0] == 200:
-                    return fe
-            except subprocess.CalledProcessError:
-                pass
-            time.sleep(0.1)
-        pytest.fail(f"nginx did not start:\n{fe.logs()}")
+        if not wait_until_serving(fe):
+            pytest.fail(f"nginx did not start:\n{fe.logs()}")
+        return fe
 
     yield start
     for name in started:
