@@ -7,7 +7,7 @@ The evals below judge whole customer turns, so they all use the same span filter
 - `gen_ai.operation.name` = `invoke_agent`
 - `service.name` = `byteorder-assistant-service`
 
-They need [content capture](telemetry.md#content-capture) switched on. Create them under **AI Observability → Evals** in Dash0, then generate traffic with the [scenario harness](scenarios.md).
+They need [content capture](telemetry.md#content-capture) switched on. Create them under **AI Observability → Evals** in Dash0 (there is no API or CLI for evals while they are in beta), then generate traffic with the [scenario harness](scenarios.md). The evals for byteorder.wallace.network use a 100% sample rate and the **Standard** judge model class.
 
 ## 1. Grounded in the menu
 
@@ -35,7 +35,9 @@ Saying an item is NOT available is fine. Answer true if the reply is fully
 grounded in the menu, false if it mentions or offers anything not on the menu.
 ```
 
-## 2. Respects stated requirements
+## 2. Dietary claims are correct
+
+Catches wrong claims in both directions: recommending something that breaks the customer's requirement, and ruling out something that meets it. For example, the model once insisted a Margarita (mozzarella and tomato sauce) was not vegetarian because nothing on the menu is labelled vegetarian.
 
 **Verdict:** numeric (pass threshold 0.7)
 
@@ -52,14 +54,18 @@ grounded in the menu, false if it mentions or offers anything not on the menu.
 {{gen_ai.output.messages}}
 </assistant_reply>
 
-The customer may have stated requirements such as vegetarian, no onion, or
-something spicy. Judge only from the ingredients listed in the menu.
+The customer may have stated requirements such as vegetarian, vegan, no onion,
+or something spicy. The menu has no dietary labels, so judge each claim only
+from the ingredients listed for each item in the instructions, using common
+knowledge of those ingredients (for example: cheese and tomato sauce are
+vegetarian; beef and pepperoni are not).
 
-Score 1.0 if every suggestion in the reply meets all of the customer's stated
-requirements, or if the customer stated none.
-Score 0.5 if the reply is partly right, or is unsure and says so.
-Score 0.0 if the reply recommends something that clearly breaks a stated
-requirement (for example pepperoni for a vegetarian).
+Score 1.0 if every claim the reply makes about whether an item meets the
+customer's requirements is correct, or if the customer stated no requirement.
+Score 0.5 if the reply is unsure about an item and says so, or is partly right.
+Score 0.0 if the reply recommends an item that breaks a stated requirement, or
+says an item does not meet the requirement when its listed ingredients show
+that it does (for example, calling a cheese and tomato pizza not vegetarian).
 ```
 
 ## 3. No allergen safety claims
