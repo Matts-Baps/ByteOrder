@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { useOrganization } from '@clerk/clerk-react'
+import { useAdminAuth } from '../lib/auth'
 import api from '../lib/api'
 
 const MAX_LOGO_BYTES = 512 * 1024  // 512 KB
 
 export default function Settings() {
-  const { organization } = useOrganization()
+  const { organization } = useAdminAuth()
 
   const [printerUrl, setPrinterUrl] = useState('')
   const [kitchenName, setKitchenName] = useState('')

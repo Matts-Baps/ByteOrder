@@ -15,5 +15,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.js'],
     globals: true,
+    // Server tests in tests/ run under Jest (npm test).
+    include: ['src/**/*.test.{js,jsx}'],
   },
 })
