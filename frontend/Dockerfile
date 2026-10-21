@@ -1,4 +1,4 @@
-FROM node:20-slim AS builder
+FROM node:24-slim AS builder
 # Update npm to get patched bundled deps (tar, minimatch, glob, cross-spawn).
 RUN npm install -g npm@latest
 WORKDIR /app

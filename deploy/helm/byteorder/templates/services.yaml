@@ -1,4 +1,7 @@
 {{- $services := list "menu-service" "order-service" "print-service" "admin" "frontend" }}
+{{- if .Values.assistant.enabled }}
+{{- $services = append $services "assistant-service" }}
+{{- end }}
 {{- range $svc := $services }}
 ---
 apiVersion: apps/v1
@@ -33,6 +36,7 @@ spec:
           image: {{ $.Values.registry }}/{{ $svc }}:{{ $.Values.imageTag }}
           imagePullPolicy: Always
           env:
+            {{- if ne $svc "assistant-service" }}
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -43,6 +47,7 @@ spec:
                   name: {{ required "postgres.existingSecret is required when postgres.enabled is false" $.Values.postgres.existingSecret }}
                   key: {{ required "postgres.existingSecretKey is required when postgres.enabled is false" $.Values.postgres.existingSecretKey }}
                   {{- end }}
+            {{- end }}
             {{- if ne $svc "frontend" }}
             - name: REDIS_URL
               value: redis://byteorder-redis:6379
@@ -103,6 +108,28 @@ spec:
               value: {{ $.Values.selfHosted.defaultKitchenSlug | default $.Values.selfHosted.defaultKitchenId | quote }}
             {{- end }}
             {{- end }}
+            {{- if eq $svc "assistant-service" }}
+            - name: MENU_SERVICE_URL
+              value: http://byteorder-menu-service:8000
+            - name: OLLAMA_URL
+              value: {{ required "assistant.ollamaUrl is required when assistant.enabled is true" $.Values.assistant.ollamaUrl | quote }}
+            - name: OLLAMA_MODEL
+              value: {{ $.Values.assistant.ollamaModel | quote }}
+            {{- with $.Values.assistant.ollamaNumCtx }}
+            - name: OLLAMA_NUM_CTX
+              value: {{ . | quote }}
+            {{- end }}
+            - name: RATE_LIMIT_PER_CLIENT_PER_MINUTE
+              value: {{ $.Values.assistant.rateLimitPerClientPerMinute | quote }}
+            - name: RATE_LIMIT_PER_KITCHEN_PER_MINUTE
+              value: {{ $.Values.assistant.rateLimitPerKitchenPerMinute | quote }}
+            - name: OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT
+              value: {{ $.Values.assistant.captureMessageContent | quote }}
+            {{- if eq $.Values.authMode "self-hosted" }}
+            - name: DEFAULT_KITCHEN_ID
+              value: {{ $.Values.selfHosted.defaultKitchenId | quote }}
+            {{- end }}
+            {{- end }}
           {{- if eq $svc "frontend" }}
           volumeMounts:
             - name: nginx-config
@@ -142,6 +169,18 @@ spec:
     app: byteorder-order-service
   ports:
     - port: 8001
+{{- if .Values.assistant.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: byteorder-assistant-service
+spec:
+  selector:
+    app: byteorder-assistant-service
+  ports:
+    - port: 8002
+{{- end }}
 ---
 apiVersion: v1
 kind: Service

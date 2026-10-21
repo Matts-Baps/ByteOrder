@@ -32,6 +32,7 @@ ByteOrder runs in two modes:
 | `menu-service` | Python / FastAPI | CRUD for categories, items, ingredients, option groups, settings |
 | `order-service` | Python / FastAPI + SSE | Order lifecycle, queue position, real-time status streaming |
 | `print-service` | Python worker | Subscribes to Redis, POSTs formatted tickets to an HTTP printer endpoint |
+| `assistant-service` | Python / FastAPI | Optional chat assistant that suggests a draft order, using a model on an Ollama server |
 | `postgres` | PostgreSQL 16 | Persistent store |
 | `redis` | Redis 7 | Pub/sub for real-time SSE updates |
 
@@ -170,6 +171,19 @@ Each Clerk organisation maps to one kitchen. The admin sets a friendly slug in *
 
 ---
 
+## Ordering assistant (optional)
+
+Customers can tap **Ask for help** on the ordering page and describe what they want. The assistant suggests a draft order, which they move into their basket, check and place themselves. It never places orders on its own.
+
+It needs an [Ollama](https://ollama.com) server with a model that supports tool calling (default `qwen3:4b-instruct`).
+
+- **Docker Compose:** set `OLLAMA_URL` in `deploy/.env`. The default reaches Ollama on the Docker host.
+- **Helm:** set `assistant.enabled: true` and `assistant.ollamaUrl`.
+
+The button only appears when the service is running. How it works, its telemetry, and the Dash0 evals that judge it are documented in [`docs/assistant/`](docs/assistant/index.md) (`uvx --with mkdocs-material mkdocs serve` to browse).
+
+---
+
 ## Printer setup
 
 ByteOrder supports two printer backends:
@@ -244,7 +258,9 @@ OTEL_ENDPOINT=http://your-otel-collector:4317
 | `CLERK_SECRET_KEY` | admin | Clerk secret key (cloud only) |
 | `MENU_SERVICE_URL` | admin | Internal URL of menu-service |
 | `ORDER_SERVICE_URL` | admin | Internal URL of order-service |
-| `OTEL_ENDPOINT` | all | OpenTelemetry collector endpoint (optional) |
+| `OTEL_ENDPOINT` | menu, order, print, admin | OpenTelemetry collector endpoint (optional) |
+| `OLLAMA_URL` | assistant | Ollama server (see [assistant configuration](docs/assistant/index.md#configuration) for the rest) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` etc. | assistant | Standard OpenTelemetry variables; export is off unless the endpoint is set |
 
 ---
 

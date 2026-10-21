@@ -1,0 +1,22 @@
+site_name: ByteOrder
+repo_url: https://github.com/Matts-Baps/ByteOrder
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    primary: deep orange
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Ordering assistant:
+      - How it works: assistant/index.md
+      - Telemetry: assistant/telemetry.md
+      - Evals in Dash0: assistant/evals.md
+      - Scenario harness: assistant/scenarios.md

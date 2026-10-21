@@ -37,3 +37,6 @@ secrets/
 # Site-specific Helm values (contain cluster refs / secrets)
 deploy/helm/**/values.*.yaml
 deploy/helm/byteorder/values.wallace.yaml
+
+# MkDocs build output
+site/

@@ -49,6 +49,18 @@ imagePullSecrets: [] # list of secret names (use either or both)
 
 otelEndpoint: ""
 
+# Customer ordering assistant, backed by a model on an Ollama server.
+assistant:
+  enabled: false
+  ollamaUrl: ""                  # required when enabled, e.g. http://ollama.ollama.svc:11434
+  ollamaModel: qwen3:4b-instruct # must support tool calling
+  ollamaNumCtx: ""               # leave empty to use the server's default context size
+  rateLimitPerClientPerMinute: 10
+  rateLimitPerKitchenPerMinute: 60
+  # Record prompts and replies on spans (needed for evals that judge conversations).
+  # Customer messages are then stored in your telemetry backend.
+  captureMessageContent: false
+
 dash0:
   enabled: false   # set true when deploying to a cluster running the Dash0 operator
 
@@ -109,6 +121,13 @@ resources:
       memory: 128Mi
     limits:
       cpu: 200m
+      memory: 256Mi
+  assistant-service:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
       memory: 256Mi
   postgres:
     requests:
