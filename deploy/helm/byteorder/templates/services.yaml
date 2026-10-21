@@ -45,7 +45,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $svc }}
-          image: {{ $.Values.registry }}/{{ $svc }}:{{ $.Values.imageTag }}
+          image: {{ $.Values.registry }}/{{ $svc }}:{{ (index $.Values.images $svc | default dict).tag | default $.Values.imageTag }}
           imagePullPolicy: Always
           env:
             {{- if ne $svc "assistant-service" }}

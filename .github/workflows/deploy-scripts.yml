@@ -1,0 +1,27 @@
+name: Deploy Scripts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "deploy/scripts/**"
+      - ".github/workflows/deploy-scripts.yml"
+      - ".github/workflows/deploy-ossway.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "deploy/scripts/**"
+      - ".github/workflows/deploy-scripts.yml"
+      - ".github/workflows/deploy-ossway.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v10.3.0
+      - name: set-image-tag.sh tests
+        run: uvx pytest -v deploy/scripts/tests

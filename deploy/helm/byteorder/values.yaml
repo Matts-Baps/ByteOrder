@@ -1,5 +1,8 @@
 registry: ghcr.io/matts-baps/byteorder
 imageTag: latest
+# Pin a service to its own tag, e.g. images.frontend.tag: sha-4194200. Services
+# not listed here use imageTag. CI sets these to deploy new images (#70).
+images: {}
 
 postgres:
   enabled: true          # set false to use an external PostgreSQL cluster

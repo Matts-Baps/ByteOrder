@@ -1,0 +1,86 @@
+name: Deploy to Ossway
+
+# Called by each image workflow after it pushes a new image from main (#70).
+# Pins that service to the new sha- tag in the home-infra repo, which ArgoCD
+# watches, so the new image rolls out on Ossway.
+#
+# Needs the HOME_INFRA_TOKEN secret: a fine-grained token with Contents
+# read/write on proffalken/home-infra only. Without it the deploy is skipped.
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: ByteOrder service name, e.g. frontend or menu-service
+        required: true
+        type: string
+    secrets:
+      HOME_INFRA_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  HOME_INFRA_REPO: proffalken/home-infra
+  VALUES_FILE: k8s/ossway/byteorder/values.yaml
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for the home-infra token
+        id: token
+        env:
+          TOKEN: ${{ secrets.HOME_INFRA_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::HOME_INFRA_TOKEN is not set, so ${{ inputs.service }} was not deployed to Ossway."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout ByteOrder
+        if: steps.token.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Checkout home-infra
+        if: steps.token.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.HOME_INFRA_REPO }}
+          token: ${{ secrets.HOME_INFRA_TOKEN }}
+          path: home-infra
+          fetch-depth: 0
+
+      - name: Pin ${{ inputs.service }} to the new image
+        if: steps.token.outputs.skip != 'true'
+        env:
+          SERVICE: ${{ inputs.service }}
+        working-directory: home-infra
+        run: |
+          # docker/metadata-action's type=sha tag: sha- and the short commit.
+          tag="sha-$(printf '%s' "$GITHUB_SHA" | cut -c1-7)"
+          git config user.name "byteorder-deploy[bot]"
+          git config user.email "byteorder-deploy@users.noreply.github.com"
+
+          # Other services may deploy from the same merge at the same time, so
+          # start from the latest main and retry if someone else pushed first.
+          for attempt in 1 2 3 4 5; do
+            git fetch -q origin main
+            git reset -q --hard origin/main
+            "$GITHUB_WORKSPACE/deploy/scripts/set-image-tag.sh" "$VALUES_FILE" "$SERVICE" "$tag"
+            if git diff --quiet; then
+              echo "Nothing to deploy."
+              exit 0
+            fi
+            git commit -q -am "deploy(byteorder): $SERVICE $tag" \
+              -m "Built from Matts-Baps/ByteOrder@$GITHUB_SHA."
+            if git push -q origin HEAD:main; then
+              echo "::notice::Deployed $SERVICE $tag to Ossway."
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt), retrying."
+            sleep $((attempt * 3))
+          done
+          echo "::error::Could not push the $SERVICE deploy to $HOME_INFRA_REPO."
+          exit 1
