@@ -132,3 +132,22 @@ def test_frontend_restarts_when_its_nginx_config_changes():
 
 def test_frontend_checksum_is_stable():
     assert frontend_annotations() == frontend_annotations()
+
+
+# --- admin behind the ingress (#64) -------------------------------------------
+
+
+def test_admin_trusts_one_proxy_hop_by_default():
+    env = deployments()["byteorder-admin"]
+    assert env["TRUST_PROXY"]["value"] == "1"
+
+
+def test_admin_trusted_hops_are_configurable():
+    env = deployments("admin.trustProxy=2")["byteorder-admin"]
+    assert env["TRUST_PROXY"]["value"] == "2"
+
+
+def test_only_admin_gets_trust_proxy():
+    for name, env in deployments().items():
+        if name != "byteorder-admin":
+            assert "TRUST_PROXY" not in env, name

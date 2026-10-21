@@ -61,3 +61,61 @@ describe('Rate limiting blocks excessive traffic', () => {
     expect(hasHeader).toBe(true)
   })
 })
+
+// Behind a reverse proxy (ingress), every request arrives from the proxy's IP.
+// TRUST_PROXY sets how many proxy hops to trust when reading X-Forwarded-For (#64).
+async function floodUntil429(app, forwardedFor) {
+  for (let i = 0; i < 400; i++) {
+    const req = request(app).get('/api/config')
+    if (forwardedFor) req.set('X-Forwarded-For', forwardedFor(i))
+    const res = await req
+    if (res.status === 429) return true
+  }
+  return false
+}
+
+describe('Rate limiting behind a trusted proxy', () => {
+  let app
+
+  beforeAll(() => {
+    jest.resetModules()
+    process.env.TRUST_PROXY = '1'
+    app = require('../server/app')
+  })
+
+  afterAll(() => {
+    delete process.env.TRUST_PROXY
+  })
+
+  it('gives each forwarded client its own limit', async () => {
+    expect(await floodUntil429(app, () => '203.0.113.1')).toBe(true)
+    const other = await request(app).get('/api/config').set('X-Forwarded-For', '203.0.113.2')
+    expect(other.status).toBe(200)
+  })
+})
+
+describe('Rate limiting with no proxy configured', () => {
+  let app
+
+  beforeAll(() => {
+    jest.resetModules()
+    delete process.env.TRUST_PROXY
+    app = require('../server/app')
+  })
+
+  it('ignores X-Forwarded-For, so clients cannot dodge the limit by faking it', async () => {
+    expect(await floodUntil429(app, i => `198.51.100.${i % 250}`)).toBe(true)
+  })
+})
+
+describe('TRUST_PROXY validation', () => {
+  afterEach(() => {
+    delete process.env.TRUST_PROXY
+  })
+
+  it.each(['true', '-1', '1.5', 'abc'])('refuses to start with TRUST_PROXY=%s', value => {
+    jest.resetModules()
+    process.env.TRUST_PROXY = value
+    expect(() => require('../server/app')).toThrow(/TRUST_PROXY/)
+  })
+})

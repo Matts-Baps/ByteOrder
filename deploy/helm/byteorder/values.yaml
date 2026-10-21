@@ -86,6 +86,12 @@ ingress:
     enabled: false
     clusterIssuer: letsencrypt-prod
 
+admin:
+  # Number of reverse proxies in front of the admin server (the ingress
+  # controller counts as one). Used to read the real client IP for rate
+  # limiting. Add one for each extra proxy, e.g. a CDN in front of the ingress.
+  trustProxy: 1
+
 services:
   frontend:
     port: 80
