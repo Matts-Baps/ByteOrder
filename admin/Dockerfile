@@ -1,4 +1,4 @@
-FROM node:20-slim AS builder
+FROM node:24-slim AS builder
 # Update npm to get patched bundled deps (tar, minimatch, glob, cross-spawn).
 RUN npm install -g npm@latest
 WORKDIR /app
@@ -9,7 +9,7 @@ COPY . .
 RUN npm run build && \
     npm prune --omit=dev
 
-FROM node:20-slim
+FROM node:24-slim
 # Update npm to get patched bundled deps in the runtime image too.
 RUN npm install -g npm@latest
 WORKDIR /app

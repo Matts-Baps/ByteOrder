@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut, RedirectToSignIn, useAuth, useClerk } from '@clerk/clerk-react'
 import Layout from './components/Layout'
 import { setupApiInterceptors, setupSelfHostedInterceptors } from './lib/api'
+import { CloudAuthProvider, SelfHostedAuthProvider } from './lib/auth'
 import Login from './pages/Login'
 import OrderQueue from './pages/OrderQueue'
 import OrderHistory from './pages/OrderHistory'
@@ -25,7 +26,9 @@ function CloudProtectedLayout() {
     <>
       <SignedIn>
         <ApiSetup />
-        <Layout />
+        <CloudAuthProvider>
+          <Layout />
+        </CloudAuthProvider>
       </SignedIn>
       <SignedOut><RedirectToSignIn /></SignedOut>
     </>
@@ -34,8 +37,15 @@ function CloudProtectedLayout() {
 
 // ── Self-hosted: localStorage JWT protected layout ────────────────────────────
 function SelfHostedProtectedLayout() {
-  useEffect(() => setupSelfHostedInterceptors(), [])
-  return localStorage.getItem('token') ? <Layout /> : <Navigate to="/login" replace />
+  // Runs during render, not in useEffect: React runs child effects before parent
+  // effects, so the pages' first requests would otherwise go out without the token.
+  setupSelfHostedInterceptors()
+  if (!localStorage.getItem('token')) return <Navigate to="/login" replace />
+  return (
+    <SelfHostedAuthProvider>
+      <Layout />
+    </SelfHostedAuthProvider>
+  )
 }
 
 export default function App({ authMode }) {

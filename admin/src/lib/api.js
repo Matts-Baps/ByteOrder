@@ -25,14 +25,21 @@ export function setupApiInterceptors({ getToken, openSignIn }) {
 }
 
 // ── Self-hosted mode: plain localStorage JWT ──────────────────────────────────
+// Installed once for the life of the page. It must be in place before any page
+// component mounts, so it is called during render rather than in an effect.
+let selfHostedInstalled = false
+
 export function setupSelfHostedInterceptors() {
-  const requestId = api.interceptors.request.use(config => {
+  if (selfHostedInstalled) return
+  selfHostedInstalled = true
+
+  api.interceptors.request.use(config => {
     const token = localStorage.getItem('token')
     if (token) config.headers.Authorization = `Bearer ${token}`
     return config
   })
 
-  const responseId = api.interceptors.response.use(
+  api.interceptors.response.use(
     r => r,
     err => {
       if (err.response?.status === 401) {
@@ -42,11 +49,6 @@ export function setupSelfHostedInterceptors() {
       return Promise.reject(err)
     }
   )
-
-  return () => {
-    api.interceptors.request.eject(requestId)
-    api.interceptors.response.eject(responseId)
-  }
 }
 
 export default api

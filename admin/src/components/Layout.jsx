@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
-import { useClerk } from '@clerk/clerk-react'
+import { useAdminAuth } from '../lib/auth'
 import api from '../lib/api'
 
 const nav = [
@@ -13,7 +13,7 @@ const nav = [
 ]
 
 export default function Layout() {
-  const { signOut } = useClerk()
+  const { signOut } = useAdminAuth()
   const [kitchenName, setKitchenName] = useState('ByteOrder')
 
   useEffect(() => {

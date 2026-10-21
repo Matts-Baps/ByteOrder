@@ -23,17 +23,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: admin/package-lock.json
       - run: npm ci
         working-directory: admin
-      - run: npm test
+      - name: Server tests (Jest)
+        run: npm test
+        working-directory: admin
+      - name: UI tests (Vitest)
+        run: npm run test:ui
         working-directory: admin
 
+  # Builds on every PR so Dockerfile problems show up before merge. Only main pushes.
   build-and-push:
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,6 +55,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
+        if: github.event_name == 'push'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -71,23 +76,25 @@ jobs:
         with:
           context: admin
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Install Trivy
+        if: github.event_name == 'push'
         run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
       - name: Scan image with Trivy
+        if: github.event_name == 'push'
         run: |
           IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" | tr '[:upper:]' '[:lower:]')
           trivy image --format sarif --output trivy-image.sarif --severity CRITICAL,HIGH --exit-code 0 "$IMAGE"
 
       - name: Upload image scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: always() && github.event_name == 'push'
         with:
           sarif_file: trivy-image.sarif
           category: trivy-admin

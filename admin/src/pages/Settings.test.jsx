@@ -11,12 +11,12 @@ vi.mock('../lib/api', () => ({
   },
 }))
 
-vi.mock('@clerk/clerk-react', () => ({
-  useOrganization: vi.fn(),
+vi.mock('../lib/auth', () => ({
+  useAdminAuth: vi.fn(),
 }))
 
 import api from '../lib/api'
-import { useOrganization } from '@clerk/clerk-react'
+import { useAdminAuth } from '../lib/auth'
 
 // Helpers to set up API responses for each test
 function mockEmptySettings() {
@@ -45,7 +45,7 @@ describe('Settings — kitchen name pre-fill from Clerk', () => {
   })
 
   it('pre-fills kitchen name from Clerk org name when settings return empty', async () => {
-    useOrganization.mockReturnValue({ organization: { name: "Matt's Baps", slug: 'matts-baps' } })
+    useAdminAuth.mockReturnValue({ mode: 'cloud', organization: { name: "Matt's Baps", slug: 'matts-baps' }, signOut: vi.fn() })
     mockEmptySettings()
 
     render(<Settings />)
@@ -57,7 +57,7 @@ describe('Settings — kitchen name pre-fill from Clerk', () => {
   })
 
   it('shows a banner when kitchen name is pre-filled from Clerk', async () => {
-    useOrganization.mockReturnValue({ organization: { name: "Matt's Baps", slug: 'matts-baps' } })
+    useAdminAuth.mockReturnValue({ mode: 'cloud', organization: { name: "Matt's Baps", slug: 'matts-baps' }, signOut: vi.fn() })
     mockEmptySettings()
 
     render(<Settings />)
@@ -68,7 +68,7 @@ describe('Settings — kitchen name pre-fill from Clerk', () => {
   })
 
   it('does not pre-fill kitchen name when settings already has a value', async () => {
-    useOrganization.mockReturnValue({ organization: { name: "Matt's Baps", slug: 'matts-baps' } })
+    useAdminAuth.mockReturnValue({ mode: 'cloud', organization: { name: "Matt's Baps", slug: 'matts-baps' }, signOut: vi.fn() })
     mockSettingsWithKitchenName('My Custom Kitchen')
 
     render(<Settings />)
@@ -81,7 +81,7 @@ describe('Settings — kitchen name pre-fill from Clerk', () => {
   })
 
   it('does not pre-fill kitchen name when Clerk org name is unavailable', async () => {
-    useOrganization.mockReturnValue({ organization: null })
+    useAdminAuth.mockReturnValue({ mode: 'cloud', organization: null, signOut: vi.fn() })
     mockEmptySettings()
 
     render(<Settings />)
