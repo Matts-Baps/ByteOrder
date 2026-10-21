@@ -57,7 +57,7 @@ def _uid() -> str:
 
 def yq(values: Path, expr: str) -> str:
     result = subprocess.run(
-        ["docker", "run", "--rm", "-v", f"{values.parent}:/work", YQ_IMAGE, expr, f"/work/{values.name}"],
+        ["docker", "run", "--rm", "--user", _uid(), "-v", f"{values.parent}:/work", YQ_IMAGE, expr, f"/work/{values.name}"],
         capture_output=True, text=True, check=True,
     )
     return result.stdout.strip()
