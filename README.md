@@ -166,6 +166,24 @@ Pinned tags suit GitOps tools such as ArgoCD, which only roll out a new image wh
    - **Third click** — removes from item
 4. Use **Option Groups** (▼ on each item) for mutually exclusive choices like Size
 
+### Allergens
+
+Each ingredient can be tagged with any of the 14 major allergens UK food law
+requires businesses to declare ([FSA guidance](https://www.food.gov.uk/business-guidance/allergen-guidance-for-food-businesses)).
+In **Admin → Ingredients**, press **Allergens** on an ingredient, tick what it
+contains, and tick "I've checked this ingredient's allergens" when the list is
+complete.
+
+New and existing ingredients start as **not checked**, so "no allergens" and
+"nobody has checked yet" are never confused. A menu item's allergens count as
+confirmed only when all its active ingredients are checked; an item with no
+ingredients is never confirmed.
+
+The menu service returns, for each item, `allergens.contains` (from default
+ingredients), `allergens.in_extras` (what optional extras would add) and
+`allergens.confirmed`. `GET /allergens/` lists the allergen ids and labels.
+Option groups have no allergen data.
+
 ### Branding
 
 **Admin → Settings** lets you customise:

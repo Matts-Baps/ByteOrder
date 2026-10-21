@@ -1,6 +1,7 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, false
 from sqlalchemy.orm import relationship
+from app.allergens import in_order
 from app.database import Base
 
 
@@ -36,6 +37,23 @@ class MenuItem(Base):
     item_ingredients = relationship("MenuItemIngredient", back_populates="menu_item", cascade="all, delete-orphan")
     option_groups = relationship("OptionGroup", back_populates="menu_item", cascade="all, delete-orphan")
 
+    @property
+    def allergens(self) -> dict:
+        """What the item's active ingredients contain (#72).
+
+        `in_extras` lists only what optional extras would add. `confirmed` is
+        false until every ingredient has been checked, and for an item with no
+        ingredients, as nobody has said what is in it.
+        """
+        links = [ii for ii in self.item_ingredients if ii.ingredient.active]
+        contains = {a for ii in links if ii.is_default for a in ii.ingredient.allergens}
+        extras = {a for ii in links if not ii.is_default for a in ii.ingredient.allergens}
+        return {
+            "contains": in_order(contains),
+            "in_extras": in_order(extras - contains),
+            "confirmed": bool(links) and all(ii.ingredient.allergens_checked for ii in links),
+        }
+
 
 class Ingredient(Base):
     __tablename__ = "ingredients"
@@ -43,7 +61,25 @@ class Ingredient(Base):
     kitchen_id = Column(String, nullable=False, index=True)
     name = Column(String, nullable=False)
     active = Column(Boolean, default=True)
+    # False until someone has confirmed the allergen list is complete, so "no
+    # allergens" and "not checked yet" can be told apart (#72).
+    allergens_checked = Column(Boolean, nullable=False, default=False, server_default=false())
     item_ingredients = relationship("MenuItemIngredient", back_populates="ingredient")
+    allergen_rows = relationship("IngredientAllergen", cascade="all, delete-orphan")
+
+    @property
+    def allergens(self) -> list[str]:
+        return in_order(row.allergen for row in self.allergen_rows)
+
+    @allergens.setter
+    def allergens(self, value) -> None:
+        self.allergen_rows = [IngredientAllergen(allergen=a) for a in in_order(value)]
+
+
+class IngredientAllergen(Base):
+    __tablename__ = "ingredient_allergens"
+    ingredient_id = Column(Integer, ForeignKey("ingredients.id", ondelete="CASCADE"), primary_key=True)
+    allergen = Column(String, primary_key=True)
 
 
 class MenuItemIngredient(Base):

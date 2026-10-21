@@ -152,3 +152,30 @@ class TestMigrationOnOldSchema:
         engine = _make_old_engine(include_other_tables=False)  # no categories etc.
         from app.main import _run_migrations
         _run_migrations(engine=engine)  # must not raise
+
+
+class TestAllergensCheckedMigration:
+    """#72: ingredients gain allergens_checked; existing rows start unchecked."""
+
+    def _engine_with_ingredient(self):
+        engine = _make_old_engine(include_other_tables=True)
+        with engine.connect() as conn:
+            conn.execute(text("INSERT INTO ingredients (id, name, active) VALUES (1, 'Bun', 1)"))
+            conn.commit()
+        return engine
+
+    def test_column_added_and_existing_rows_unchecked(self):
+        engine = self._engine_with_ingredient()
+        from app.main import _run_migrations
+        _run_migrations(engine=engine)
+        with engine.connect() as conn:
+            cols = {c['name'] for c in sa_inspect(conn).get_columns('ingredients')}
+            value = conn.execute(text("SELECT allergens_checked FROM ingredients WHERE id = 1")).scalar()
+        assert 'allergens_checked' in cols
+        assert not value
+
+    def test_idempotent(self):
+        engine = self._engine_with_ingredient()
+        from app.main import _run_migrations
+        _run_migrations(engine=engine)
+        _run_migrations(engine=engine)

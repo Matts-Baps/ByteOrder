@@ -5,7 +5,7 @@ from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.telemetry import setup_telemetry
-from app.routers import categories, items, ingredients, settings as settings_router, kitchens
+from app.routers import allergens, categories, items, ingredients, settings as settings_router, kitchens
 
 
 def _run_migrations(engine=None):
@@ -31,6 +31,15 @@ def _run_migrations(engine=None):
                     conn.execute(text(
                         f"ALTER TABLE {table_name} ADD COLUMN kitchen_id VARCHAR NOT NULL DEFAULT ''"
                     ))
+
+        # ingredients: allergens_checked (#72). Existing ingredients start
+        # unchecked, so their allergens show as not confirmed.
+        if 'ingredients' in existing_tables:
+            cols = {c['name'] for c in insp.get_columns('ingredients')}
+            if 'allergens_checked' not in cols:
+                conn.execute(text(
+                    "ALTER TABLE ingredients ADD COLUMN allergens_checked BOOLEAN NOT NULL DEFAULT FALSE"
+                ))
 
         # settings: add kitchen_id with DEFAULT 'default' so self-hosted installs
         # retain their existing data under the default kitchen.
@@ -92,6 +101,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(allergens.router)
 app.include_router(categories.router)
 app.include_router(items.router)
 app.include_router(ingredients.router)

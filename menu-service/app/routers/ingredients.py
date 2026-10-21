@@ -17,7 +17,13 @@ def list_ingredients(active_only: bool = False, db: Session = Depends(get_db), k
 
 @router.post("/", response_model=schemas.IngredientOut, status_code=201)
 def create_ingredient(data: schemas.IngredientIn, db: Session = Depends(get_db), kitchen_id: str = Depends(get_kitchen_id)):
-    ingredient = models.Ingredient(**data.model_dump(), kitchen_id=kitchen_id)
+    ingredient = models.Ingredient(
+        kitchen_id=kitchen_id,
+        name=data.name,
+        active=data.active,
+        allergens_checked=bool(data.allergens_checked),
+    )
+    ingredient.allergens = data.allergens or []
     db.add(ingredient)
     db.commit()
     db.refresh(ingredient)
@@ -29,7 +35,7 @@ def update_ingredient(ingredient_id: int, data: schemas.IngredientIn, db: Sessio
     ingredient = db.query(models.Ingredient).filter(models.Ingredient.id == ingredient_id, models.Ingredient.kitchen_id == kitchen_id).first()
     if not ingredient:
         raise HTTPException(status_code=404, detail="Ingredient not found")
-    for k, v in data.model_dump().items():
+    for k, v in data.model_dump(exclude_none=True).items():
         setattr(ingredient, k, v)
     db.commit()
     db.refresh(ingredient)
