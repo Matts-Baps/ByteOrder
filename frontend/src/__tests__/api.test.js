@@ -22,10 +22,16 @@ describe('api.js', () => {
     expect(orderApi).toBeDefined()
   })
 
-  it('setKitchenId sets X-Kitchen-ID header on both instances', async () => {
-    const { menuApi, orderApi, setKitchenId } = await import('../lib/api.js')
+  it('setKitchenId sets X-Kitchen-ID header on all instances', async () => {
+    const { menuApi, orderApi, assistantApi, setKitchenId } = await import('../lib/api.js')
     setKitchenId('kitchen-123')
     expect(menuApi.defaults.headers.common['X-Kitchen-ID']).toBe('kitchen-123')
     expect(orderApi.defaults.headers.common['X-Kitchen-ID']).toBe('kitchen-123')
+    expect(assistantApi.defaults.headers.common['X-Kitchen-ID']).toBe('kitchen-123')
+  })
+
+  it('creates assistantApi pointing at the assistant proxy', async () => {
+    await import('../lib/api.js')
+    expect(axios.create).toHaveBeenCalledWith(expect.objectContaining({ baseURL: '/assistant-api' }))
   })
 })

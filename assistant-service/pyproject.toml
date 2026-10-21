@@ -1,0 +1,31 @@
+[project]
+name = "byteorder-assistant"
+version = "0.1.0"
+description = "Customer ordering assistant for ByteOrder, backed by a local Ollama model"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.156.8",
+    "httpx>=0.28.1",
+    "opentelemetry-api>=1.45.1",
+    "opentelemetry-exporter-otlp>=1.45.1",
+    "opentelemetry-instrumentation-fastapi>=0.66b1",
+    "opentelemetry-instrumentation-httpx>=0.66b1",
+    "opentelemetry-sdk>=1.45.1",
+    "pydantic-settings>=2.16.1",
+    "redis>=8.1.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "respx>=0.23.1",
+]

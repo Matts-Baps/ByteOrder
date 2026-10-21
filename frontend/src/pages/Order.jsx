@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { menuApi, orderApi } from '../lib/api'
+import { menuApi, orderApi, assistantApi } from '../lib/api'
 import { useKitchen } from '../contexts/KitchenContext'
+import AssistantChat from '../components/AssistantChat'
 
 const STEPS = { NAME: 'name', CATEGORY: 'category', ITEM: 'item', CUSTOMISE: 'customise', BASKET: 'basket', CONFIRM: 'confirm' }
 
@@ -17,13 +18,25 @@ export default function Order() {
   const [basket, setBasket] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [kitchenName, setKitchenName] = useState('ByteOrder')
+  const [assistantAvailable, setAssistantAvailable] = useState(false)
+  const [assistantOpen, setAssistantOpen] = useState(false)
 
   useEffect(() => {
     menuApi.get('/categories/').then(({ data }) => setCategories(data))
     menuApi.get('/settings/kitchen_name').then(({ data }) => {
       if (data.value) setKitchenName(data.value)
     }).catch(() => {})
+    // The assistant is optional: only offer it if the service is deployed.
+    assistantApi.get('/health').then(() => setAssistantAvailable(true)).catch(() => {})
   }, [])
+
+  function applyDraft(items) {
+    // The draft is a complete order, so it replaces the basket. The customer
+    // still reviews it and presses Place Order themselves.
+    setBasket(items)
+    setAssistantOpen(false)
+    setStep(STEPS.BASKET)
+  }
 
   function startCustomise(item) {
     setSelectedItem(item)
@@ -78,15 +91,29 @@ export default function Order() {
           }} className="text-white text-xl">←</button>
         )}
         <h1 className="text-xl font-bold">{kitchenName}</h1>
-        {basket.length > 0 && step !== STEPS.BASKET && (
-          <button
-            onClick={() => setStep(STEPS.BASKET)}
-            className="ml-auto bg-white text-brand-600 font-bold px-3 py-1 rounded-lg text-sm"
-          >
-            Basket ({basket.length})
-          </button>
-        )}
+        <div className="ml-auto flex gap-2">
+          {assistantAvailable && step !== STEPS.NAME && (
+            <button
+              onClick={() => setAssistantOpen(true)}
+              className="border-2 border-white text-white font-bold px-3 py-1 rounded-lg text-sm"
+            >
+              Ask for help
+            </button>
+          )}
+          {basket.length > 0 && step !== STEPS.BASKET && (
+            <button
+              onClick={() => setStep(STEPS.BASKET)}
+              className="bg-white text-brand-600 font-bold px-3 py-1 rounded-lg text-sm"
+            >
+              Basket ({basket.length})
+            </button>
+          )}
+        </div>
       </header>
+
+      {assistantOpen && (
+        <AssistantChat customerName={name} onUseDraft={applyDraft} onClose={() => setAssistantOpen(false)} />
+      )}
 
       <div className="max-w-lg mx-auto px-4 py-6">
 
