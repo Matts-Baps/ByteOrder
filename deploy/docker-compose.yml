@@ -1,3 +1,11 @@
+# OpenTelemetry for every backend service, using the standard variables only.
+# Export is off unless OTEL_EXPORTER_OTLP_ENDPOINT is set (e.g. in .env).
+x-otel-env: &otel-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}
+  OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+  OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-}
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -30,7 +38,8 @@ services:
       AUTH_MODE: ${AUTH_MODE:-self-hosted}
       DEFAULT_KITCHEN_ID: ${DEFAULT_KITCHEN_ID:-default}
       DEFAULT_KITCHEN_SLUG: ${DEFAULT_KITCHEN_SLUG:-default}
-      OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
+      <<: *otel-env
+      OTEL_SERVICE_NAME: byteorder-menu-service
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,7 +55,8 @@ services:
       REDIS_URL: redis://redis:6379
       AUTH_MODE: ${AUTH_MODE:-self-hosted}
       DEFAULT_KITCHEN_ID: ${DEFAULT_KITCHEN_ID:-default}
-      OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
+      <<: *otel-env
+      OTEL_SERVICE_NAME: byteorder-order-service
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,7 +73,8 @@ services:
       DATABASE_URL: postgresql://byteorder:${POSTGRES_PASSWORD:-byteorder}@postgres:5432/byteorder
       REDIS_URL: redis://redis:6379
       AUTH_MODE: ${AUTH_MODE:-self-hosted}
-      OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
+      <<: *otel-env
+      OTEL_SERVICE_NAME: byteorder-print-service
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,11 +98,8 @@ services:
       # Raise these when running the scenario harness, which sends many messages quickly.
       RATE_LIMIT_PER_CLIENT_PER_MINUTE: ${ASSISTANT_RATE_LIMIT_PER_CLIENT:-10}
       RATE_LIMIT_PER_KITCHEN_PER_MINUTE: ${ASSISTANT_RATE_LIMIT_PER_KITCHEN:-60}
-      # OpenTelemetry: standard variables only. Export is off unless the endpoint is set.
+      <<: *otel-env
       OTEL_SERVICE_NAME: byteorder-assistant-service
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-      OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}
-      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
       # Records prompts and replies on spans so evals can judge them. Customer messages
       # will be stored in your telemetry backend; set to false to stop that.
       OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT: ${OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT:-true}
@@ -122,7 +130,8 @@ services:
       # Cloud auth (AUTH_MODE=cloud)
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
-      OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
+      <<: *otel-env
+      OTEL_SERVICE_NAME: byteorder-admin
     depends_on:
       - menu-service
       - order-service
@@ -133,7 +142,8 @@ services:
     build:
       context: ../frontend
       args:
-        VITE_OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
+        # Browser telemetry is still set at build time (see #62).
+        VITE_OTEL_ENDPOINT: ${VITE_OTEL_ENDPOINT:-}
     image: ghcr.io/matts-baps/byteorder/frontend:latest
     depends_on:
       - menu-service

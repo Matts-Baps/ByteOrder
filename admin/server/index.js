@@ -1,7 +1,5 @@
-// OpenTelemetry — must be required before anything else
-if (process.env.OTEL_ENDPOINT) {
-  require('./telemetry')
-}
+// OpenTelemetry — must start before anything else is required
+require('./telemetry').startTelemetry()
 
 const app = require('./app')
 

@@ -1,3 +1,6 @@
+{{- if .Values.otelEndpoint }}
+{{- fail "otelEndpoint has been replaced by otel.endpoint (standard OTEL_* variables). Move the value to otel.endpoint and use the OTLP/HTTP port, usually 4318." }}
+{{- end }}
 {{- $services := list "menu-service" "order-service" "print-service" "admin" "frontend" }}
 {{- if .Values.assistant.enabled }}
 {{- $services = append $services "assistant-service" }}
@@ -51,10 +54,25 @@ spec:
             {{- if ne $svc "frontend" }}
             - name: REDIS_URL
               value: redis://byteorder-redis:6379
-            - name: OTEL_ENDPOINT
-              value: {{ $.Values.otelEndpoint | quote }}
             - name: OTEL_SERVICE_NAME
               value: "byteorder-{{ $svc }}"
+            {{- with $.Values.otel.endpoint }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ . | quote }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: {{ $.Values.otel.protocol | quote }}
+            {{- end }}
+            {{- with $.Values.otel.headersSecret.name }}
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: {{ $.Values.otel.headersSecret.key | default "headers" }}
+            {{- end }}
+            {{- range $name, $value := $.Values.otel.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
             - name: AUTH_MODE
               value: {{ $.Values.authMode | quote }}
             {{- end }}
@@ -75,7 +93,7 @@ spec:
                   name: {{ if $.Values.clerk.existingSecretName }}{{ $.Values.clerk.existingSecretName }}{{ else }}byteorder-clerk{{ end }}
                   key: secret-key
             {{- else }}
-            {{- $selfHostedExistingSecret := dig "selfHosted" "existingSecretName" "" $.Values }}
+            {{- $selfHostedExistingSecret := $.Values.selfHosted.existingSecretName | default "" }}
             {{- $selfHostedSecret := ternary $selfHostedExistingSecret "byteorder-self-hosted" (ne $selfHostedExistingSecret "") }}
             - name: ADMIN_USERNAME
               valueFrom:

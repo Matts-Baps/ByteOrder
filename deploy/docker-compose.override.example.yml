@@ -1,15 +1,12 @@
-# Copy this to docker-compose.override.yml and fill in your values
+# Copy this to docker-compose.override.yml and fill in your values.
+#
+# OpenTelemetry is configured with the standard OTEL_* variables, normally in
+# deploy/.env rather than here, for example:
+#   OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+#   OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <token>
+# The services export over OTLP/HTTP, whose default port is 4318 (4317 is gRPC).
 services:
-  menu-service:
-    environment:
-      OTEL_ENDPOINT: "https://ingress.eu-west-1.aws.dash0.com:4317"
-  order-service:
-    environment:
-      OTEL_ENDPOINT: "https://ingress.eu-west-1.aws.dash0.com:4317"
-  print-service:
-    environment:
-      OTEL_ENDPOINT: "https://ingress.eu-west-1.aws.dash0.com:4317"
   admin:
     environment:
       JWT_SECRET: "your-strong-secret-here"
-      ADMIN_DEFAULT_PASSWORD: "your-admin-password"
+      ADMIN_PASSWORD: "your-admin-password"

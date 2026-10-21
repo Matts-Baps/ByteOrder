@@ -225,20 +225,43 @@ The kiosk home screen (`/`) shows a QR code that links customers to `/order` (se
 
 ---
 
-## Observability (Dash0 / OpenTelemetry)
+## Observability (OpenTelemetry)
 
-ByteOrder is instrumented with OpenTelemetry. For [Dash0](https://github.com/dash0hq/dash0-operator):
+ByteOrder is instrumented with OpenTelemetry and can send to any OTLP endpoint, usually an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/). The backend services (menu, order, print, admin and assistant) are configured only with the [standard OpenTelemetry environment variables](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/). Export is off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
+
+The services export over OTLP/HTTP, whose default port is **4318**. Port 4317 is OTLP/gRPC; to use it, also set `OTEL_EXPORTER_OTLP_PROTOCOL=grpc`.
+
+**docker-compose:** set the variables in `deploy/.env`. Compose passes them to every backend service and gives each its own `OTEL_SERVICE_NAME` (`byteorder-<service>`).
+
+```env
+OTEL_EXPORTER_OTLP_ENDPOINT=http://your-otel-collector:4318
+# Optional
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <token>
+OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=dev
+```
+
+**Helm:** use the `otel` values:
+
+```yaml
+otel:
+  endpoint: http://otel-collector.observability:4318
+  headersSecret:          # optional: Secret holding OTEL_EXPORTER_OTLP_HEADERS
+    name: otel-auth
+    key: headers
+  env:                    # optional: any other OTEL_* variables
+    OTEL_RESOURCE_ATTRIBUTES: deployment.environment.name=prod
+```
+
+With the [Dash0 operator](https://github.com/dash0hq/dash0-operator), `--set dash0.enabled=true` creates a `Dash0Monitoring` resource. The operator then injects the endpoint itself, so `otel.endpoint` can stay empty:
 
 ```bash
 helm upgrade byteorder deploy/helm/byteorder \
   -n byteorder --reuse-values --set dash0.enabled=true
 ```
 
-For docker-compose, set `OTEL_ENDPOINT` in your `.env`:
+> **Upgrading:** the old `OTEL_ENDPOINT` variable and the Helm `otelEndpoint` value have been removed. Use `OTEL_EXPORTER_OTLP_ENDPOINT` and `otel.endpoint` instead. The chart refuses to render if `otelEndpoint` is still set.
 
-```env
-OTEL_ENDPOINT=http://your-otel-collector:4317
-```
+**Browser telemetry** from the customer frontend is still configured at build time with the `VITE_OTEL_ENDPOINT` build argument (`docker compose build frontend` reads it from `.env`). The published frontend image is built without it.
 
 ---
 
@@ -258,9 +281,9 @@ OTEL_ENDPOINT=http://your-otel-collector:4317
 | `CLERK_SECRET_KEY` | admin | Clerk secret key (cloud only) |
 | `MENU_SERVICE_URL` | admin | Internal URL of menu-service |
 | `ORDER_SERVICE_URL` | admin | Internal URL of order-service |
-| `OTEL_ENDPOINT` | menu, order, print, admin | OpenTelemetry collector endpoint (optional) |
 | `OLLAMA_URL` | assistant | Ollama server (see [assistant configuration](docs/assistant/index.md#configuration) for the rest) |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` etc. | assistant | Standard OpenTelemetry variables; export is off unless the endpoint is set |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | menu, order, print, admin, assistant | OTLP endpoint; telemetry export is off unless set (see [Observability](#observability-opentelemetry)) |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` | menu, order, print, admin, assistant | Standard OpenTelemetry variables |
 
 ---
 
