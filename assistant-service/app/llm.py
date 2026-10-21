@@ -43,7 +43,8 @@ class ChatModel(Protocol):
     server_address: str | None
     server_port: int | None
 
-    async def chat(self, messages: list[dict], tools: list[dict]) -> LLMResponse: ...
+    async def chat(self, messages: list[dict], tools: list[dict]) -> LLMResponse:
+        """Send the conversation and tool definitions; return the model's reply."""
 
 
 class OllamaChat:

@@ -4,13 +4,13 @@ Export is enabled only when OTEL_EXPORTER_OTLP_ENDPOINT is set. If something
 else (such as the Dash0 operator's auto-instrumentation) has already installed
 providers, they are reused rather than replaced.
 """
+import functools
 import logging
 import os
 
 from opentelemetry import metrics, trace
 
 log = logging.getLogger(__name__)
-_providers_installed = False
 
 
 def _exporters():
@@ -24,10 +24,9 @@ def _exporters():
     return OTLPSpanExporter(), OTLPMetricExporter()
 
 
+@functools.cache
 def _install_providers() -> None:
-    global _providers_installed
-    if _providers_installed:
-        return
+    """Install tracer and meter providers. Cached so it only ever runs once per process."""
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
     from opentelemetry.sdk.resources import Resource
@@ -50,16 +49,22 @@ def _install_providers() -> None:
         )
     else:
         log.info("Using existing meter provider")
-    _providers_installed = True
+
+
+@functools.cache
+def _instrument_httpx() -> None:
+    """Patch httpx globally, once per process."""
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+    HTTPXClientInstrumentor().instrument()
 
 
 def setup_telemetry(app) -> None:
     if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
         return
     _install_providers()
+    _instrument_httpx()
 
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
     FastAPIInstrumentor.instrument_app(app, excluded_urls="health")
-    HTTPXClientInstrumentor().instrument()
