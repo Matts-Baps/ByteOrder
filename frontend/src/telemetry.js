@@ -23,21 +23,27 @@ export async function startTelemetry(
 ) {
   if (!config?.enabled) return false
 
-  // Only download the SDK, and the replay recorder, when they're switched on.
-  const { init } = await import('@dash0/sdk-web')
-  const opts = {
-    serviceName: config.serviceName || 'byteorder-frontend',
-    endpoint: { url: `${origin}/otel`, authToken: PLACEHOLDER_TOKEN },
-    sessionSamplingRate: config.sampleRate ?? 100,
-    enabledInstrumentations: INSTRUMENTATIONS,
+  try {
+    // Only download the SDK, and the replay recorder, when they're switched on.
+    const { init } = await import('@dash0/sdk-web')
+    const opts = {
+      serviceName: config.serviceName || 'byteorder-frontend',
+      endpoint: { url: `${origin}/otel`, authToken: PLACEHOLDER_TOKEN },
+      sessionSamplingRate: config.sampleRate ?? 100,
+      enabledInstrumentations: INSTRUMENTATIONS,
+    }
+    if (config.sessionReplay) {
+      const { recorder } = await import('@dash0/sdk-web/session-recording')
+      opts.enabledInstrumentations = [...INSTRUMENTATIONS, '@dash0/session-recording']
+      // Anything typed (names, chat messages) is replaced with asterisks before
+      // it leaves the browser.
+      opts.sessionRecording = { recorder, maskAllInputs: true }
+    }
+    init(opts)
+    return true
+  } catch (err) {
+    // Telemetry must never stop the app from loading.
+    console.warn('Browser telemetry failed to start', err)
+    return false
   }
-  if (config.sessionReplay) {
-    const { recorder } = await import('@dash0/sdk-web/session-recording')
-    opts.enabledInstrumentations = [...INSTRUMENTATIONS, '@dash0/session-recording']
-    // Anything typed (names, chat messages) is replaced with asterisks before
-    // it leaves the browser.
-    opts.sessionRecording = { recorder, maskAllInputs: true }
-  }
-  init(opts)
-  return true
 }
