@@ -281,6 +281,7 @@ helm upgrade byteorder deploy/helm/byteorder \
 | `CLERK_SECRET_KEY` | admin | Clerk secret key (cloud only) |
 | `MENU_SERVICE_URL` | admin | Internal URL of menu-service |
 | `ORDER_SERVICE_URL` | admin | Internal URL of order-service |
+| `TRUST_PROXY` | admin | Number of reverse proxies in front of admin, used to find the client IP for rate limiting. `0` (default) for Docker Compose; the Helm chart sets `1` for the ingress (`admin.trustProxy`) |
 | `OLLAMA_URL` | assistant | Ollama server (see [assistant configuration](docs/assistant/index.md#configuration) for the rest) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | menu, order, print, admin, assistant | OTLP endpoint; telemetry export is off unless set (see [Observability](#observability-opentelemetry)) |
 | `OTEL_EXPORTER_OTLP_PROTOCOL`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` | menu, order, print, admin, assistant | Standard OpenTelemetry variables |

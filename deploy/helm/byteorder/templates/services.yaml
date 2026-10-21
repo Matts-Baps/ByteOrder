@@ -87,6 +87,8 @@ spec:
               value: http://byteorder-menu-service:8000
             - name: ORDER_SERVICE_URL
               value: http://byteorder-order-service:8001
+            - name: TRUST_PROXY
+              value: {{ $.Values.admin.trustProxy | quote }}
             {{- if eq $.Values.authMode "cloud" }}
             - name: CLERK_PUBLISHABLE_KEY
               valueFrom:

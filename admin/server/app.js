@@ -26,7 +26,19 @@ if (AUTH_MODE === 'cloud') {
   requireAuth = () => requireAuthSelfHosted
 }
 
+// How many reverse proxies sit in front of this server (e.g. 1 for a k8s
+// ingress). Express then takes the client IP from X-Forwarded-For, so each
+// client gets its own rate limit. 0 (the default) ignores the header, so
+// clients can't fake it when nothing in front sets it.
+function trustProxyHops(value = '0') {
+  if (!/^\d+$/.test(value)) {
+    throw new Error(`TRUST_PROXY must be a whole number of proxy hops, got "${value}"`)
+  }
+  return Number(value)
+}
+
 const app = express()
+app.set('trust proxy', trustProxyHops(process.env.TRUST_PROXY))
 
 // Rate-limit API requests to mitigate denial-of-service attacks.
 // 300 requests per minute per IP: allows normal burst navigation (a page load
