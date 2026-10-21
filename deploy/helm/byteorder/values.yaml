@@ -47,7 +47,20 @@ selfHosted:
 imagePullSecret: ""   # single secret name (shorthand)
 imagePullSecrets: [] # list of secret names (use either or both)
 
-otelEndpoint: ""
+# OpenTelemetry, configured with the standard OTEL_* variables on every backend
+# service. Each service gets OTEL_SERVICE_NAME=byteorder-<service>.
+# Export is off unless an endpoint is set (or injected, e.g. by the Dash0 operator).
+otel:
+  endpoint: ""              # OTEL_EXPORTER_OTLP_ENDPOINT, e.g. http://otel-collector:4318
+  protocol: http/protobuf   # OTEL_EXPORTER_OTLP_PROTOCOL; services export over OTLP/HTTP
+  # OTEL_EXPORTER_OTLP_HEADERS from an existing Secret, e.g. for an auth token:
+  #   kubectl create secret generic otel-auth \
+  #     --from-literal=headers="Authorization=Bearer <token>"
+  headersSecret:
+    name: ""
+    key: headers
+  # Any other OTEL_* variables, e.g. OTEL_RESOURCE_ATTRIBUTES.
+  env: {}
 
 # Customer ordering assistant, backed by a model on an Ollama server.
 assistant:

@@ -3,45 +3,9 @@ import os
 from fastapi import FastAPI
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import settings
 from app.database import engine, Base
+from app.telemetry import setup_telemetry
 from app.routers import categories, items, ingredients, settings as settings_router, kitchens
-
-# OpenTelemetry setup
-_otel_exporter_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
-if _otel_exporter_endpoint or settings.otel_endpoint:
-    from opentelemetry import trace, metrics
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-    from opentelemetry.sdk.metrics import MeterProvider
-    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-
-    resource = Resource.create({"service.name": settings.otel_service_name})
-
-    # Prefer the standard env var (injected by Dash0); fall back to OTEL_ENDPOINT for
-    # non-Dash0 deployments, appending the required OTLP paths.
-    if _otel_exporter_endpoint:
-        trace_exporter = OTLPSpanExporter()
-        metric_exporter = OTLPMetricExporter()
-    else:
-        trace_exporter = OTLPSpanExporter(endpoint=f"{settings.otel_endpoint}/v1/traces")
-        metric_exporter = OTLPMetricExporter(endpoint=f"{settings.otel_endpoint}/v1/metrics")
-
-    provider = TracerProvider(resource=resource)
-    provider.add_span_processor(BatchSpanProcessor(trace_exporter))
-    trace.set_tracer_provider(provider)
-
-    meter_provider = MeterProvider(
-        resource=resource,
-        metric_readers=[PeriodicExportingMetricReader(metric_exporter)],
-    )
-    metrics.set_meter_provider(meter_provider)
-
-    SQLAlchemyInstrumentor().instrument(engine=engine)
 
 
 def _run_migrations(engine=None):
@@ -134,9 +98,7 @@ app.include_router(ingredients.router)
 app.include_router(settings_router.router)
 app.include_router(kitchens.router)
 
-if _otel_exporter_endpoint or settings.otel_endpoint:
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-    FastAPIInstrumentor.instrument_app(app, tracer_provider=trace.get_tracer_provider())
+setup_telemetry(engine=engine, app=app)
 
 
 @app.get("/health")
