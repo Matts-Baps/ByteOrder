@@ -261,7 +261,9 @@ helm upgrade byteorder deploy/helm/byteorder \
 
 > **Upgrading:** the old `OTEL_ENDPOINT` variable and the Helm `otelEndpoint` value have been removed. Use `OTEL_EXPORTER_OTLP_ENDPOINT` and `otel.endpoint` instead. The chart refuses to render if `otelEndpoint` is still set.
 
-**Browser telemetry** from the customer frontend is still configured at build time with the `VITE_OTEL_ENDPOINT` build argument (`docker compose build frontend` reads it from `.env`). The published frontend image is built without it.
+**Browser telemetry** from the customer frontend uses the [Dash0 Web SDK](https://dash0.com/docs/dash0/monitoring/websites/getting-started-website-monitoring) and is off by default. Switch it on with `BROWSER_TELEMETRY_ENABLED=true` (Compose) or `otel.browser.enabled=true` (Helm), with `OTEL_EXPORTER_OTLP_ENDPOINT` / `otel.endpoint` pointing at an OTLP/HTTP collector. The browser sends to `/otel` on the frontend's own site and nginx forwards it to the collector, so no credentials reach the browser. See [Browser telemetry](docs/browser-telemetry.md).
+
+> **Upgrading:** the frontend's `VITE_OTEL_ENDPOINT` build argument has been removed. Browser telemetry is now configured when the container starts.
 
 ---
 
@@ -282,9 +284,11 @@ helm upgrade byteorder deploy/helm/byteorder \
 | `MENU_SERVICE_URL` | admin | Internal URL of menu-service |
 | `ORDER_SERVICE_URL` | admin | Internal URL of order-service |
 | `TRUST_PROXY` | admin | Number of reverse proxies in front of admin, used to find the client IP for rate limiting. `0` (default) for Docker Compose; the Helm chart sets `1` for the ingress (`admin.trustProxy`) |
+| `BROWSER_TELEMETRY_ENABLED` | frontend | `true` to send browser telemetry through nginx to `OTEL_EXPORTER_OTLP_ENDPOINT` (default `false`) |
+| `BROWSER_TELEMETRY_SAMPLE_RATE` | frontend | Percentage of browser sessions to record, 0–100 (default `100`) |
 | `OLLAMA_URL` | assistant | Ollama server (see [assistant configuration](docs/assistant/index.md#configuration) for the rest) |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | menu, order, print, admin, assistant | OTLP endpoint; telemetry export is off unless set (see [Observability](#observability-opentelemetry)) |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` | menu, order, print, admin, assistant | Standard OpenTelemetry variables |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | menu, order, print, admin, assistant, frontend | OTLP endpoint; telemetry export is off unless set (see [Observability](#observability-opentelemetry)) |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` | menu, order, print, admin, assistant, frontend | Standard OpenTelemetry variables |
 
 ---
 

@@ -141,10 +141,15 @@ services:
   frontend:
     build:
       context: ../frontend
-      args:
-        # Browser telemetry is still set at build time (see #62).
-        VITE_OTEL_ENDPOINT: ${VITE_OTEL_ENDPOINT:-}
     image: ghcr.io/matts-baps/byteorder/frontend:latest
+    environment:
+      # Browser telemetry (Dash0 Web SDK) is off unless BROWSER_TELEMETRY_ENABLED
+      # is true and OTEL_EXPORTER_OTLP_ENDPOINT is an OTLP/HTTP collector. nginx
+      # forwards the browser's telemetry there, adding any OTLP headers.
+      <<: *otel-env
+      OTEL_SERVICE_NAME: byteorder-frontend
+      BROWSER_TELEMETRY_ENABLED: ${BROWSER_TELEMETRY_ENABLED:-false}
+      BROWSER_TELEMETRY_SAMPLE_RATE: ${BROWSER_TELEMETRY_SAMPLE_RATE:-100}
     depends_on:
       - menu-service
       - order-service

@@ -1,3 +1,6 @@
+{{- if and .Values.otel.browser.enabled (not .Values.otel.endpoint) }}
+{{- fail "otel.browser.enabled needs otel.endpoint (an OTLP/HTTP collector) to forward browser telemetry to." }}
+{{- end }}
 {{- if .Values.otelEndpoint }}
 {{- fail "otelEndpoint has been replaced by otel.endpoint (standard OTEL_* variables). Move the value to otel.endpoint and use the OTLP/HTTP port, usually 4318." }}
 {{- end }}
@@ -60,6 +63,14 @@ spec:
             {{- if ne $svc "frontend" }}
             - name: REDIS_URL
               value: redis://byteorder-redis:6379
+            {{- end }}
+            {{- if or (ne $svc "frontend") $.Values.otel.browser.enabled }}
+            {{- if eq $svc "frontend" }}
+            - name: BROWSER_TELEMETRY_ENABLED
+              value: "true"
+            - name: BROWSER_TELEMETRY_SAMPLE_RATE
+              value: {{ $.Values.otel.browser.sampleRate | quote }}
+            {{- end }}
             - name: OTEL_SERVICE_NAME
               value: "byteorder-{{ $svc }}"
             {{- with $.Values.otel.endpoint }}
@@ -79,6 +90,8 @@ spec:
             - name: {{ $name }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- end }}
+            {{- if ne $svc "frontend" }}
             - name: AUTH_MODE
               value: {{ $.Values.authMode | quote }}
             {{- end }}

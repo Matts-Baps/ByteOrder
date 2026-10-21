@@ -151,3 +151,51 @@ def test_only_admin_gets_trust_proxy():
     for name, env in deployments().items():
         if name != "byteorder-admin":
             assert "TRUST_PROXY" not in env, name
+
+
+# --- browser telemetry (#62) ---------------------------------------------------
+
+BROWSER = ["otel.endpoint=http://collector:4318", "otel.browser.enabled=true"]
+
+
+def nginx_config(*sets: str) -> str:
+    result = render(*sets)
+    assert result.returncode == 0, result.stderr
+    for doc in yaml.safe_load_all(result.stdout):
+        if doc and doc["kind"] == "ConfigMap" and doc["metadata"]["name"] == "byteorder-frontend-nginx":
+            return doc["data"]["default.conf"]
+    raise AssertionError("frontend nginx ConfigMap not found")
+
+
+def test_browser_telemetry_is_off_by_default():
+    env = deployments("otel.endpoint=http://collector:4318")["byteorder-frontend"]
+    assert "BROWSER_TELEMETRY_ENABLED" not in env
+    assert "OTEL_EXPORTER_OTLP_ENDPOINT" not in env
+
+
+def test_browser_telemetry_gets_the_collector_settings():
+    env = deployments(*BROWSER, "otel.headersSecret.name=otlp", "otel.browser.sampleRate=25")["byteorder-frontend"]
+    assert env["BROWSER_TELEMETRY_ENABLED"]["value"] == "true"
+    assert env["BROWSER_TELEMETRY_SAMPLE_RATE"]["value"] == "25"
+    assert env["OTEL_EXPORTER_OTLP_ENDPOINT"]["value"] == "http://collector:4318"
+    assert env["OTEL_EXPORTER_OTLP_PROTOCOL"]["value"] == "http/protobuf"
+    assert env["OTEL_SERVICE_NAME"]["value"] == "byteorder-frontend"
+    assert secret_name(env["OTEL_EXPORTER_OTLP_HEADERS"]) == "otlp"
+
+
+def test_frontend_never_gets_backend_settings():
+    env = deployments(*BROWSER)["byteorder-frontend"]
+    for var in ("REDIS_URL", "AUTH_MODE"):
+        assert var not in env
+
+
+def test_browser_telemetry_needs_an_endpoint():
+    result = render("otel.browser.enabled=true")
+    assert result.returncode != 0
+    assert "otel.endpoint" in result.stderr
+
+
+def test_nginx_config_includes_the_generated_telemetry_proxy():
+    config = nginx_config()
+    assert "include /etc/nginx/byteorder/*.conf;" in config
+    assert "location = /runtime-config.js" in config
