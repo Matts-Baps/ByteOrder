@@ -42,5 +42,13 @@ if [ "$current" = "$tag" ]; then
     exit 0
 fi
 
-SERVICE="$service" TAG="$tag" yq -i '.images[strenv(SERVICE)].tag = strenv(TAG)' "$file"
+# yq drops blank lines when it rewrites a file. Apply only its real changes,
+# as a patch that ignores blank-line and spacing differences, so the layout
+# survives.
+updated=$(mktemp)
+changes=$(mktemp)
+trap 'rm -f "$updated" "$changes"' EXIT
+SERVICE="$service" TAG="$tag" yq '.images[strenv(SERVICE)].tag = strenv(TAG)' "$file" > "$updated"
+diff -B -b "$file" "$updated" > "$changes" || true
+patch -s "$file" < "$changes"
 echo "$service: ${current:-unset} -> $tag"

@@ -1,7 +1,8 @@
 """Tests for set-image-tag.sh, which CI uses to deploy a new image (#70).
 
-Runs the script with mikefarah yq v4 (the yq on GitHub's runners) in its
-official image. Run from the repo root:  uvx pytest deploy/scripts/tests
+Runs the script with mikefarah yq v4 and GNU diff/patch, as on GitHub's
+runners, in a small image built from the official yq image.
+Run from the repo root:  uvx pytest deploy/scripts/tests
 Needs Docker.
 """
 
@@ -12,6 +13,20 @@ import pytest
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 YQ_IMAGE = "mikefarah/yq:4.54.1"
+TEST_IMAGE = "byteorder-set-image-tag-test"
+DOCKERFILE = f"""\
+FROM {YQ_IMAGE}
+USER root
+RUN apk add --no-cache diffutils patch
+"""
+
+
+@pytest.fixture(scope="session", autouse=True)
+def test_image():
+    subprocess.run(
+        ["docker", "build", "-q", "-t", TEST_IMAGE, "-"],
+        input=DOCKERFILE, text=True, check=True, capture_output=True,
+    )
 
 VALUES = """\
 registry: ghcr.io/matts-baps/byteorder
@@ -28,7 +43,7 @@ def run(values: Path, *args: str) -> subprocess.CompletedProcess:
             "docker", "run", "--rm", "--user", f"{_uid()}",
             "-v", f"{SCRIPTS}:/scripts:ro",
             "-v", f"{values.parent}:/work",
-            "--entrypoint", "sh", YQ_IMAGE,
+            "--entrypoint", "sh", TEST_IMAGE,
             "/scripts/set-image-tag.sh", f"/work/{values.name}", *args,
         ],
         capture_output=True, text=True,
@@ -80,6 +95,14 @@ def test_keeps_the_rest_of_the_file_and_its_comments(values):
     assert "# Database on the CNPG cluster." in text
     assert "# keep this comment" in text
     assert yq(values, '.registry') == "ghcr.io/matts-baps/byteorder"
+
+
+def test_keeps_blank_lines(values):
+    run(values, "frontend", "sha-4194200")
+    run(values, "frontend", "sha-1234567")
+    lines = values.read_text().splitlines()
+    assert lines[1] == ""
+    assert lines[:5] == VALUES.splitlines()[:5]
 
 
 def test_reports_when_nothing_changed(values):
