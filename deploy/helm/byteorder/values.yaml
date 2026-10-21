@@ -69,6 +69,8 @@ otel:
     enabled: false
     # Percentage of browser sessions to record (0-100).
     sampleRate: 100
+    # Record sessions for replay in Dash0. Typed text is masked.
+    sessionReplay: false
 
 # Customer ordering assistant, backed by a model on an Ollama server.
 assistant:

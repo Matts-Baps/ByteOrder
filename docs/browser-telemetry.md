@@ -2,7 +2,7 @@
 
 The customer frontend can send browser telemetry to an OpenTelemetry collector using the [Dash0 Web SDK](https://dash0.com/docs/dash0/miscellaneous/tooling/web-sdk/overview). It is off by default.
 
-The SDK records page views, navigation timing, Core Web Vitals, JavaScript errors, and `fetch`/`XMLHttpRequest` calls. Session replay is not enabled.
+The SDK records page views, navigation timing, Core Web Vitals, JavaScript errors, rage clicks, and `fetch`/`XMLHttpRequest` calls. Session replay is optional and off by default.
 
 ## How it works
 
@@ -18,6 +18,7 @@ The SDK requires a token, so the browser sends a placeholder. nginx removes it, 
 |---|---|---|---|
 | `BROWSER_TELEMETRY_ENABLED` | `otel.browser.enabled` | `false` | Switch browser telemetry on |
 | `BROWSER_TELEMETRY_SAMPLE_RATE` | `otel.browser.sampleRate` | `100` | Percentage of browser sessions to record (0–100) |
+| `BROWSER_TELEMETRY_SESSION_REPLAY` | `otel.browser.sessionReplay` | `false` | Record sessions for replay in Dash0 |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `otel.endpoint` | — | Collector to forward to. Must accept OTLP over HTTP (usually port 4318) |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `otel.protocol` | `http/protobuf` | Must be an HTTP protocol; `grpc` leaves browser telemetry off |
 | `OTEL_EXPORTER_OTLP_HEADERS` | `otel.headersSecret` | — | Headers nginx adds when forwarding, e.g. an auth token |
@@ -26,6 +27,12 @@ The SDK requires a token, so the browser sends a placeholder. nginx removes it, 
 The Helm chart refuses to render with `otel.browser.enabled=true` and no `otel.endpoint`.
 
 If the settings are wrong (no endpoint, a gRPC protocol, a collector name that doesn't resolve, an invalid sample rate or header), the script leaves browser telemetry off and logs a line starting `byteorder-browser-telemetry:` explaining why. nginx still starts and serves the app.
+
+## Session replay
+
+With session replay on, the SDK records the page with [rrweb](https://github.com/rrweb-io/rrweb) and sends it to Dash0 alongside the other telemetry, through the same `/otel/v1/logs` path. The recorder is only downloaded when replay is on.
+
+Everything typed into inputs, such as guests' names and chat messages, is replaced with asterisks before it leaves the browser. Text shown on the page is recorded as is, including the assistant's replies and the messages in the chat history. Mark an element with the `dash0-mask` class to mask its text, or `dash0-block` to leave it out of the recording.
 
 ## Limits on the public endpoint
 

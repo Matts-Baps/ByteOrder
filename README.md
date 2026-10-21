@@ -286,6 +286,7 @@ helm upgrade byteorder deploy/helm/byteorder \
 | `TRUST_PROXY` | admin | Number of reverse proxies in front of admin, used to find the client IP for rate limiting. `0` (default) for Docker Compose; the Helm chart sets `1` for the ingress (`admin.trustProxy`) |
 | `BROWSER_TELEMETRY_ENABLED` | frontend | `true` to send browser telemetry through nginx to `OTEL_EXPORTER_OTLP_ENDPOINT` (default `false`) |
 | `BROWSER_TELEMETRY_SAMPLE_RATE` | frontend | Percentage of browser sessions to record, 0–100 (default `100`) |
+| `BROWSER_TELEMETRY_SESSION_REPLAY` | frontend | `true` to record sessions for replay in Dash0, with typed text masked (default `false`) |
 | `OLLAMA_URL` | assistant | Ollama server (see [assistant configuration](docs/assistant/index.md#configuration) for the rest) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | menu, order, print, admin, assistant, frontend | OTLP endpoint; telemetry export is off unless set (see [Observability](#observability-opentelemetry)) |
 | `OTEL_EXPORTER_OTLP_PROTOCOL`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` | menu, order, print, admin, assistant, frontend | Standard OpenTelemetry variables |

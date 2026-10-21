@@ -66,6 +66,12 @@ case "$sample_rate" in
 esac
 [ "$sample_rate" -le 100 ] || off "BROWSER_TELEMETRY_SAMPLE_RATE must be a whole number from 0 to 100."
 
+session_replay=${BROWSER_TELEMETRY_SESSION_REPLAY:-false}
+case "$session_replay" in
+    true | false) ;;
+    *) off "BROWSER_TELEMETRY_SESSION_REPLAY must be true or false." ;;
+esac
+
 service_name=${OTEL_SERVICE_NAME:-byteorder-frontend}
 case "$service_name" in
     '' | *[!A-Za-z0-9._-]*) off "OTEL_SERVICE_NAME may only contain letters, digits, '.', '_' and '-'." ;;
@@ -126,5 +132,5 @@ EOF
     done
 } > "$SNIPPET_DIR/otel.conf"
 
-write_runtime_config "{ \"enabled\": true, \"serviceName\": \"$service_name\", \"sampleRate\": $sample_rate }"
+write_runtime_config "{ \"enabled\": true, \"serviceName\": \"$service_name\", \"sampleRate\": $sample_rate, \"sessionReplay\": $session_replay }"
 log "Forwarding browser telemetry to $endpoint."

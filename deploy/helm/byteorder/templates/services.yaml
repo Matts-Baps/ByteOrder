@@ -70,6 +70,8 @@ spec:
               value: "true"
             - name: BROWSER_TELEMETRY_SAMPLE_RATE
               value: {{ $.Values.otel.browser.sampleRate | quote }}
+            - name: BROWSER_TELEMETRY_SESSION_REPLAY
+              value: {{ $.Values.otel.browser.sessionReplay | quote }}
             {{- end }}
             - name: OTEL_SERVICE_NAME
               value: "byteorder-{{ $svc }}"

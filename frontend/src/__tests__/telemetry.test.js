@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@dash0/sdk-web', () => ({ init: vi.fn() }))
+vi.mock('@dash0/sdk-web/session-recording', () => ({ recorder: 'rrweb-recorder' }))
 
 import { init } from '@dash0/sdk-web'
 import { startTelemetry } from '../telemetry'
@@ -30,11 +31,20 @@ describe('browser telemetry', () => {
     expect(opts.sessionSamplingRate).toBe(25)
   })
 
-  it('never records sessions for replay', async () => {
+  it('does not record sessions for replay unless asked to', async () => {
     await startTelemetry({ enabled: true }, ORIGIN)
     const opts = init.mock.calls[0][0]
     expect(opts.enabledInstrumentations).toBeDefined()
     expect(opts.enabledInstrumentations).not.toContain('@dash0/session-recording')
+    expect(opts.sessionRecording).toBeUndefined()
+  })
+
+  it('records sessions for replay when asked to, with typed text masked', async () => {
+    await startTelemetry({ enabled: true, sessionReplay: true }, ORIGIN)
+    const opts = init.mock.calls[0][0]
+    expect(opts.enabledInstrumentations).toContain('@dash0/session-recording')
+    expect(opts.sessionRecording.recorder).toBe('rrweb-recorder')
+    expect(opts.sessionRecording.maskAllInputs).toBe(true)
   })
 
   it('falls back to sensible defaults', async () => {

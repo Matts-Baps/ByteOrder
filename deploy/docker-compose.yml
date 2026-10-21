@@ -150,6 +150,7 @@ services:
       OTEL_SERVICE_NAME: byteorder-frontend
       BROWSER_TELEMETRY_ENABLED: ${BROWSER_TELEMETRY_ENABLED:-false}
       BROWSER_TELEMETRY_SAMPLE_RATE: ${BROWSER_TELEMETRY_SAMPLE_RATE:-100}
+      BROWSER_TELEMETRY_SESSION_REPLAY: ${BROWSER_TELEMETRY_SESSION_REPLAY:-false}
     depends_on:
       - menu-service
       - order-service

@@ -8,13 +8,13 @@
 // The SDK insists on a token. nginx strips this one before forwarding.
 const PLACEHOLDER_TOKEN = 'added-by-nginx'
 
-// Everything except session replay, which would record what guests type.
 const INSTRUMENTATIONS = [
   '@dash0/navigation',
   '@dash0/web-vitals',
   '@dash0/error',
   '@dash0/fetch',
   '@dash0/xhr',
+  '@dash0/frustration-signals',
 ]
 
 export async function startTelemetry(
@@ -23,13 +23,21 @@ export async function startTelemetry(
 ) {
   if (!config?.enabled) return false
 
-  // Only download the SDK when telemetry is on.
+  // Only download the SDK, and the replay recorder, when they're switched on.
   const { init } = await import('@dash0/sdk-web')
-  init({
+  const opts = {
     serviceName: config.serviceName || 'byteorder-frontend',
     endpoint: { url: `${origin}/otel`, authToken: PLACEHOLDER_TOKEN },
     sessionSamplingRate: config.sampleRate ?? 100,
     enabledInstrumentations: INSTRUMENTATIONS,
-  })
+  }
+  if (config.sessionReplay) {
+    const { recorder } = await import('@dash0/sdk-web/session-recording')
+    opts.enabledInstrumentations = [...INSTRUMENTATIONS, '@dash0/session-recording']
+    // Anything typed (names, chat messages) is replaced with asterisks before
+    // it leaves the browser.
+    opts.sessionRecording = { recorder, maskAllInputs: true }
+  }
+  init(opts)
   return true
 }

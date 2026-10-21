@@ -177,6 +177,7 @@ def test_browser_telemetry_gets_the_collector_settings():
     env = deployments(*BROWSER, "otel.headersSecret.name=otlp", "otel.browser.sampleRate=25")["byteorder-frontend"]
     assert env["BROWSER_TELEMETRY_ENABLED"]["value"] == "true"
     assert env["BROWSER_TELEMETRY_SAMPLE_RATE"]["value"] == "25"
+    assert env["BROWSER_TELEMETRY_SESSION_REPLAY"]["value"] == "false"
     assert env["OTEL_EXPORTER_OTLP_ENDPOINT"]["value"] == "http://collector:4318"
     assert env["OTEL_EXPORTER_OTLP_PROTOCOL"]["value"] == "http/protobuf"
     assert env["OTEL_SERVICE_NAME"]["value"] == "byteorder-frontend"
@@ -199,3 +200,8 @@ def test_nginx_config_includes_the_generated_telemetry_proxy():
     config = nginx_config()
     assert "include /etc/nginx/byteorder/*.conf;" in config
     assert "location = /runtime-config.js" in config
+
+
+def test_session_replay_can_be_switched_on():
+    env = deployments(*BROWSER, "otel.browser.sessionReplay=true")["byteorder-frontend"]
+    assert env["BROWSER_TELEMETRY_SESSION_REPLAY"]["value"] == "true"

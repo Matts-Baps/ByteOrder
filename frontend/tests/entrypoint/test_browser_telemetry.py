@@ -133,8 +133,9 @@ def test_off_when_only_the_backend_endpoint_is_set(frontend):
         ({**ON, "OTEL_EXPORTER_OTLP_ENDPOINT": "http://no-such-collector.invalid:4318"}, "resolve"),
         ({**ON, "OTEL_EXPORTER_OTLP_ENDPOINT": "collector:4318"}, "http"),
         ({**ON, "BROWSER_TELEMETRY_SAMPLE_RATE": "150"}, "BROWSER_TELEMETRY_SAMPLE_RATE"),
+        ({**ON, "BROWSER_TELEMETRY_SESSION_REPLAY": "yes"}, "BROWSER_TELEMETRY_SESSION_REPLAY"),
     ],
-    ids=["no-endpoint", "grpc", "unresolvable", "no-scheme", "bad-sample-rate"],
+    ids=["no-endpoint", "grpc", "unresolvable", "no-scheme", "bad-sample-rate", "bad-replay-flag"],
 )
 def test_stays_off_and_says_why_when_misconfigured(frontend, env, reason):
     fe = frontend(**env)
@@ -154,6 +155,15 @@ def test_runtime_config_switches_tracing_on(frontend):
     assert '"enabled": true' in config
     assert '"serviceName": "byteorder-frontend"' in config
     assert '"sampleRate": 25' in config
+
+
+def test_session_replay_is_off_by_default(frontend):
+    assert '"sessionReplay": false' in runtime_config(frontend(**ON))
+
+
+def test_session_replay_can_be_switched_on(frontend):
+    fe = frontend(**ON, BROWSER_TELEMETRY_SESSION_REPLAY="true")
+    assert '"sessionReplay": true' in runtime_config(fe)
 
 
 def test_runtime_config_is_not_cached(frontend):
