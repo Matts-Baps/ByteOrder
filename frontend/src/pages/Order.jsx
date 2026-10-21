@@ -26,8 +26,11 @@ export default function Order() {
     menuApi.get('/settings/kitchen_name').then(({ data }) => {
       if (data.value) setKitchenName(data.value)
     }).catch(() => {})
-    // The assistant is optional: only offer it if the service is deployed.
-    assistantApi.get('/health').then(() => setAssistantAvailable(true)).catch(() => {})
+    // The assistant is optional: only offer it if the service is deployed. Check
+    // the body, because without it nginx serves index.html here with a 200.
+    assistantApi.get('/health')
+      .then(({ data }) => setAssistantAvailable(data?.status === 'ok'))
+      .catch(() => {})
   }, [])
 
   function applyDraft(items) {

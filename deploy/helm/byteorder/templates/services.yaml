@@ -20,6 +20,12 @@ spec:
     metadata:
       labels:
         app: byteorder-{{ $svc }}
+      {{- if eq $svc "frontend" }}
+      annotations:
+        # The nginx config is mounted with subPath, so running pods never see
+        # ConfigMap changes. Roll the pod whenever the config changes.
+        checksum/nginx-config: {{ include (print $.Template.BasePath "/frontend-nginx-config.yaml") $ | sha256sum }}
+      {{- end }}
     spec:
       {{- $pullSecrets := list -}}
       {{- if $.Values.imagePullSecret -}}
