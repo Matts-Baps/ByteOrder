@@ -54,3 +54,16 @@ describe('browser telemetry', () => {
     expect(opts.sessionSamplingRate).toBe(100)
   })
 })
+
+describe('browser telemetry failures', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  // main.jsx waits for telemetry before rendering, so it must never reject.
+  it('resolves false instead of throwing when the SDK fails to start', async () => {
+    init.mockImplementationOnce(() => { throw new Error('boom') })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(startTelemetry({ enabled: true }, ORIGIN)).resolves.toBe(false)
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
+  })
+})
