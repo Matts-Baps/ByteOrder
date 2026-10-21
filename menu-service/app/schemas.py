@@ -2,6 +2,8 @@ import re
 from typing import Optional
 from pydantic import BaseModel, field_validator
 
+from app.allergens import ALLERGENS, in_order
+
 SLUG_RE = re.compile(r'^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$')
 
 
@@ -36,16 +38,44 @@ class SettingIn(BaseModel):
     value: Optional[str]
 
 
+# Allergens
+class AllergenOut(BaseModel):
+    id: str
+    label: str
+
+
+class ItemAllergensOut(BaseModel):
+    contains: list[str]
+    in_extras: list[str]
+    confirmed: bool
+
+
 # Ingredients
 class IngredientOut(BaseModel):
     id: int
     name: str
     active: bool
+    allergens: list[str] = []
+    allergens_checked: bool = False
     model_config = {"from_attributes": True}
 
 class IngredientIn(BaseModel):
     name: str
     active: bool = True
+    # None leaves the stored value alone on update, so clients that only send
+    # name and active don't wipe allergen data.
+    allergens: Optional[list[str]] = None
+    allergens_checked: Optional[bool] = None
+
+    @field_validator("allergens")
+    @classmethod
+    def known_allergens(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+        if v is None:
+            return v
+        unknown = sorted(set(v) - set(ALLERGENS))
+        if unknown:
+            raise ValueError(f"Unknown allergens: {', '.join(unknown)}. Use: {', '.join(ALLERGENS)}")
+        return in_order(v)
 
 
 # Menu item ingredients
@@ -96,6 +126,7 @@ class MenuItemOut(BaseModel):
     sort_order: int
     item_ingredients: list[MenuItemIngredientOut] = []
     option_groups: list[OptionGroupOut] = []
+    allergens: ItemAllergensOut
     model_config = {"from_attributes": True}
 
 class MenuItemIn(BaseModel):
