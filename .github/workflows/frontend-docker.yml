@@ -39,8 +39,20 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.0
       - run: uvx pytest frontend/tests/entrypoint
 
+  nginx-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t frontend:ci frontend
+      # nginx2root (CVE-2026-123007 and four others) is fixed in nginx 1.31.9.
+      - name: Frontend nginx is 1.31.9 or later
+        run: |
+          v=$(docker run --rm --entrypoint nginx frontend:ci -v 2>&1 | sed -n 's|.*nginx/||p')
+          echo "nginx ${v:-not found}"
+          [ -n "$v" ] && [ "$(printf '1.31.9\n%s\n' "$v" | sort -V | head -n1)" = 1.31.9 ]
+
   build-and-push:
-    needs: [test, entrypoint]
+    needs: [test, entrypoint, nginx-version]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
