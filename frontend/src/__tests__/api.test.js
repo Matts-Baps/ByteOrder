@@ -31,6 +31,9 @@ describe('api.js', () => {
   })
 
   it('creates assistantApi pointing at the assistant proxy', async () => {
+    // Re-evaluate the module so axios.create calls land in this test
+    // (Vitest 5 clears mock call history between tests).
+    vi.resetModules()
     await import('../lib/api.js')
     expect(axios.create).toHaveBeenCalledWith(expect.objectContaining({ baseURL: '/assistant-api' }))
   })
