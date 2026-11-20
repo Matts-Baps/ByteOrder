@@ -41,11 +41,11 @@ jobs:
 
       - name: Checkout ByteOrder
         if: steps.token.outputs.skip != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Checkout home-infra
         if: steps.token.outputs.skip != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ env.HOME_INFRA_REPO }}
           token: ${{ secrets.HOME_INFRA_TOKEN }}
