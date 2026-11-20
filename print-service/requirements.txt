@@ -1,16 +1,16 @@
-redis==7.4.0
+redis==8.1.0
 requests==2.34.2
-psycopg2-binary==2.9.12
-sqlalchemy==2.0.50
-pydantic-settings==2.14.1
+psycopg[binary]==3.3.9
+sqlalchemy==2.1.9
+pydantic-settings==2.16.3
 
 # OpenTelemetry (aligned with other services)
-opentelemetry-api==1.42.1
-opentelemetry-sdk==1.42.1
-opentelemetry-exporter-otlp==1.42.1
-opentelemetry-instrumentation-sqlalchemy==0.63b1
-opentelemetry-instrumentation-redis==0.63b1
-opentelemetry-instrumentation-requests==0.63b1
+opentelemetry-api==1.45.2
+opentelemetry-sdk==1.45.2
+opentelemetry-exporter-otlp==1.45.2
+opentelemetry-instrumentation-sqlalchemy==0.66b2
+opentelemetry-instrumentation-redis==0.66b2
+opentelemetry-instrumentation-requests==0.66b2
 
 # Test dependencies
-pytest==9.0.3
+pytest==9.2.0
